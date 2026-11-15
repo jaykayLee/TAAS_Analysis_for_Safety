@@ -21,6 +21,7 @@ sys.path.insert(0, str(SRC))
 RAW_DIRS = [ROOT / "data" / "raw" / "taas", ROOT / "data" / "raw" / "population"]
 TEMPLATE = ROOT / "panel" / "panel_template.html"
 MANIFEST = ".build_manifest.json"
+REPO, BRANCH = "jaykayLee/TAAS_Analysis_for_Safety", "main"
 COPY_TO_LIB = {SRC / "taas.py": "taas.py", SRC / "LIBRARY_README.md": "README.md"}
 
 
@@ -30,6 +31,23 @@ def sha(p, n=1 << 20):
         while b := f.read(n):
             h.update(b)
     return h.hexdigest()[:16]
+
+
+def repo_commit():
+    """지금 폴더의 버전: git 저장소면 HEAD, zip 으로 받았으면 .zip_commit.json"""
+    import subprocess
+    if (ROOT / ".git").exists() and shutil.which("git"):
+        try:
+            out = subprocess.run(["git", "log", "-1", "--format=%H%n%cI%n%s"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=10).stdout.split("\n")
+            if len(out) >= 2 and out[0]:
+                return {"commit": out[0], "commit_date": out[1], "commit_msg": out[2] if len(out) > 2 else ""}
+        except Exception:
+            pass
+    z = ROOT / ".zip_commit.json"
+    if z.exists():
+        j = json.loads(z.read_text(encoding="utf-8"))
+        return {"commit": j.get("sha", ""), "commit_date": j.get("date", ""), "commit_msg": ""}
+    return {"commit": "", "commit_date": "", "commit_msg": ""}
 
 
 def raw_files():
@@ -103,14 +121,14 @@ def main():
         import build_excel
         build_excel.build(str(out), a.excel, str(out / f"TAAS_교통사고상세통계_{a.excel}.xlsx"))
 
-    git = ""
-    try:
-        head = (ROOT / ".git" / "HEAD").read_text().strip()
-        ref = ROOT / ".git" / head[5:] if head.startswith("ref: ") else None
-        git = (ref.read_text().strip() if ref and ref.exists() else head)[:10]
-    except OSError:
-        pass
-    man_p.write_text(json.dumps({"data": sig, "template": sha(TEMPLATE), "commit": git, "built_at": time.strftime("%Y-%m-%dT%H:%M:%S")}, ensure_ascii=False, indent=1), encoding="utf-8")
+    c = repo_commit()
+    built = time.strftime("%Y-%m-%dT%H:%M:%S")
+    data_built = built if need_data else old.get("data_built_at", old.get("built_at", built))
+    man_p.write_text(json.dumps({"data": sig, "template": sha(TEMPLATE), "commit": c["commit"], "built_at": built, "data_built_at": data_built}, ensure_ascii=False, indent=1), encoding="utf-8")
+    # 패널이 읽는 버전 정보 (헤더의 [업데이트] 버튼 아래 표시)
+    info = {"repo": REPO, "branch": BRANCH, **c, "built_at": built, "data_built_at": data_built, "data_rebuilt": need_data}
+    (out / "build_info.json").write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
+    (out / "build_info.js").write_text("window.TAAS_BUILD=" + json.dumps(info, ensure_ascii=False) + ";", encoding="utf-8")
     print(f"[3/3] 완료 ({time.time() - t0:.0f}초) → {out / 'panel.html'} 를 더블클릭해서 여세요.")
 
 

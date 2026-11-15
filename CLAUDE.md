@@ -1,7 +1,7 @@
 # 작업 규칙 (Claude)
 
 - 사용자와는 한국어로 대화합니다.
-- 이 저장소가 프로젝트의 정본입니다. 바꾼 내용은 브랜치 → 커밋 → push 로 올리고, `CHANGELOG.md` 에 한 줄 이상 남깁니다.
+- 이 저장소가 프로젝트의 정본입니다. 작업 브랜치 → 커밋 → push → PR → `main` 병합 순서로 올리고, `CHANGELOG.md` 에 한 줄 이상 남깁니다. 사용자 PC의 패널 [업데이트] 버튼은 `main` 을 받습니다.
 - 사용자 PC 산출물 위치: `C:\Users\USER\Desktop\Claude_Projects` (이 프로젝트: `TAAS Analysis`, 보조 산출물은 `TAAS Analysis\참고자료`). 다운로드 폴더에는 저장하지 않습니다.
 - `library/` 는 생성물입니다. 커밋하지 말고 `python build.py` 로 만듭니다.
 
@@ -12,7 +12,8 @@
 - 패널: `panel/panel_template.html` 한 파일(HTML+CSS+JS). `/*__SAMPLE__*/` 자리에 예시 데이터가 들어가면 단일 파일 예시판이 됩니다.
   - 상태 객체 `S`, 그래프 조작기 `makeCtl`(`CTL.*`), 통계 기법은 `ST.*`(OLS·Mann-Kendall·Pettitt·Jacobi) 와 `mTrend/mLag/mOls/mPca/mIts`.
   - 결과 행 형식(13열): run_id, 기법, 실행시각, 기간, 처리, 대상, 상대, 항목, 통계량, 값, p값, n, 비고 — 바꾸면 기존 CSV 와 합칠 수 없으니 열을 **추가만** 합니다.
-  - 자동화·검증용 훅: `window.TAAS_DEBUG()` → `{S, ST, yearPool, grid}`.
+  - 자동화·검증용 훅: `window.TAAS_DEBUG()` → `{S, ST, yearPool, grid, UPD}`.
+  - 업데이트: `serve.py`(`/api/status`, `POST /api/update` + 헤더 `X-TAAS: 1`), 패널 `UPD`/`updStatus`/`runUpdate`, 버전 정보는 `library/build_info.js`.
 - 장표 ID 9001·9002 는 통계청 인구(가상 장표). 새 외부 자료도 9000번대로 추가합니다.
 
 ## 바꾼 뒤 확인
