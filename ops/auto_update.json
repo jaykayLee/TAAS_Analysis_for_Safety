@@ -1,0 +1,12 @@
+{
+ "task_name": "TAAS Analysis for Safety",
+ "trigger_id": "trig_016PPMSHKyiTrxWEkVanDDCH",
+ "repo": "jaykayLee/TAAS_Analysis_for_Safety",
+ "artifact_url": "https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune",
+ "connector": "Claude Code Remote",
+ "runbook": "ops/AUTO_UPDATE.md",
+ "app_prompt": "ops/APP_PROMPT.md",
+ "status_doc": "ops/last_run",
+ "taas_url": "https://taas.koroad.or.kr/sta/acs/exs/typical.do?menuId=WEB_KMP_OVT_UAS_ASA",
+ "note": "예약 작업은 사용자 PC가 필요(브라우저 수집). PC·Claude 앱이 꺼져 있으면 상태 needs_app 과 함께 Claude 앱에 붙일 프롬프트를 패널에 남김"
+}

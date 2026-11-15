@@ -15,3 +15,4 @@ collector/*.json.gz
 Thumbs.db
 ~$*
 .zip_commit.json
+ops/_publish_*.json

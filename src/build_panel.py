@@ -10,9 +10,26 @@ from pathlib import Path
 SAMPLE_PIDS = [7019, 7300, 1, 9001, 9002, 7196, 7240, 7092, 7066, 7051, 7160, 7110, 7097, 7089, 7269, 7210, 7030, 7086, 4]
 
 
-def main(lib, tpl, sample_out=None):
+def auto_config(tpl):
+    """ops/auto_update.json + Claude 앱 프롬프트 → 패널의 window.TAAS_AUTO (갱신 버튼·프롬프트용)"""
+    ops = Path(tpl).resolve().parent.parent / "ops"
+    f = ops / "auto_update.json"
+    if not f.exists():
+        return ""
+    cfg = json.loads(f.read_text(encoding="utf-8"))
+    pr = ops / "APP_PROMPT.md"
+    if pr.exists():
+        cfg["app_prompt"] = pr.read_text(encoding="utf-8").replace("{artifact_url}", cfg.get("artifact_url", "")).strip()
+    return "window.TAAS_AUTO=" + json.dumps(cfg, ensure_ascii=False) + ";"
+
+
+def main(lib, tpl, sample_out=None, online_out=None):
     lib = Path(lib); html = Path(tpl).read_text(encoding="utf-8")
+    auto = auto_config(tpl)
+    html = html.replace("/*__SAMPLE__*/", auto + "/*__SAMPLE__*/")
     (lib / "panel.html").write_text(html.replace("/*__SAMPLE__*/", ""), encoding="utf-8")
+    if online_out:  # claude.ai 게시용: index.json·panel/*.json.gz 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
+        Path(online_out).write_text(html.replace("/*__SAMPLE__*/", "window.TAAS_ONLINE=1;").replace('<script src="index.js" onerror="void 0"></script>', ""), encoding="utf-8")
     idx = json.loads((lib / "index.json").read_text(encoding="utf-8"))
     # 차량기술 카드 장표명 점검
     names = {p["name"] for p in idx["patterns"]}

@@ -14,6 +14,7 @@
   - 결과 행 형식(13열): run_id, 기법, 실행시각, 기간, 처리, 대상, 상대, 항목, 통계량, 값, p값, n, 비고 — 바꾸면 기존 CSV 와 합칠 수 없으니 열을 **추가만** 합니다.
   - 자동화·검증용 훅: `window.TAAS_DEBUG()` → `{S, ST, yearPool, grid, UPD}`.
   - 업데이트: `serve.py`(`/api/status`, `POST /api/update` + 헤더 `X-TAAS: 1`), 패널 `UPD`/`updStatus`/`runUpdate`, 버전 정보는 `library/build_info.js`.
+- 자동 갱신: `ops/AUTO_UPDATE.md`(절차, 상태는 패널 db `ops/last_run`), `ops/auto_update.json`(예약 작업 ID·아티팩트 URL). 패널을 다시 게시할 때 `capabilities` 를 넘기지 않습니다(버튼의 연결 권한 유지). 게시 파일은 `python ops/publish_plan.py` 로 두 번에 나눠 올립니다.
 - 장표 ID 9001·9002 는 통계청 인구(가상 장표). 새 외부 자료도 9000번대로 추가합니다.
 
 ## 바꾼 뒤 확인

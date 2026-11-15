@@ -19,7 +19,20 @@ library\panel.html         :: 더블클릭
 
 Windows 에서는 `빌드_실행.bat` 을 더블클릭해도 됩니다.
 
-## 패널 열기와 업데이트
+## 온라인 패널과 자동 갱신 (claude.ai)
+
+전체 데이터(장표 340개)가 들어간 패널이 claude.ai 아티팩트로 게시되어 있습니다 (`ops/auto_update.json` 의 `artifact_url`).
+
+오른쪽 위 **[업데이트]** → **▶ 지금 갱신 실행** 을 누르면 예약 작업 *TAAS Analysis for Safety* 가 새 Claude 세션을 열어 아래를 진행하고, 단계가 바뀔 때마다 창에 표시됩니다.
+
+1. **실행 환경 확인** — 사용자 PC 연결과 Claude 앱 브라우저 (TAAS·KOSIS 는 클라우드에서 접속되지 않아 PC 브라우저가 필요)
+2. **브라우저 실행** — TAAS 상세통계 페이지를 열고 수집기(`collector/browser/*.js`) 주입
+3. **수집** — TAAS 최신 연도를 확인해 저장소에 없는 연도만 수집 (`taas_update.js`)
+4. **업데이트** — `build.py` → `ops/verify.py` → GitHub PR 병합 → 같은 주소로 패널 재게시
+
+PC가 꺼져 있거나 Claude 앱이 닫혀 있으면 상태가 **"Claude 앱에서 진행이 필요합니다"** 로 바뀌고, 창 아래 **Claude 앱에서 직접 실행** 칸에 붙여 넣을 프롬프트(`ops/APP_PROMPT.md`)가 열립니다. Claude 데스크톱 앱에서 새 대화에 붙여 넣으면 같은 절차(`ops/AUTO_UPDATE.md`)로 진행됩니다.
+
+## 패널 열기와 업데이트 (PC)
 
 | 방법 | 업데이트 |
 |---|---|
@@ -60,6 +73,7 @@ python build.py
 | 경로 | 내용 |
 |---|---|
 | `build.py`, `빌드_실행.bat` | 원본 → 라이브러리·패널 한 번에 만들기 |
+| `ops/` | 자동 갱신 절차서(`AUTO_UPDATE.md`)·설정(`auto_update.json`)·Claude 앱 프롬프트·상태 점검·검증·게시 계획 |
 | `serve.py`, `패널_열기.bat`, `업데이트.bat` | 로컬 서버로 패널 열기(업데이트 버튼 동작) / 업데이트만 실행 |
 | `data/raw/taas/` | TAAS 수집 원본 (5년 단위 json.gz) |
 | `data/raw/population/` | 통계청 인구를 라이브러리 형식으로 바꾼 원본 (장표 9001·9002) |
