@@ -113,7 +113,7 @@ def main():
     for s, name in COPY_TO_LIB.items():
         if s.exists():
             shutil.copy2(s, out / name)
-    info = build_panel(out, TEMPLATE, str(out / "panel_sample.html") if a.sample else None)
+    info = build_panel(out, TEMPLATE, str(out / "panel_sample.html") if a.sample else None, str(out / "panel_online.html"))
     print("      ", info)
 
     if a.excel:

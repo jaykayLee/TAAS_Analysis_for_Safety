@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 2026-11-15 — v1.2 온라인 패널 · 자동 갱신
+
+- 전체 데이터 패널을 claude.ai 아티팩트로 게시(`library/panel_online.html` + `index.json` + `panel/*.json.gz`, 장표를 열 때 받음)
+- [업데이트] → ▶ 지금 갱신 실행: 예약 작업 *TAAS Analysis for Safety*(이 PC 필요) — ① 실행 환경 확인 ② 브라우저 실행 ③ 수집 ④ 업데이트, 단계별 진행 상태를 패널에 실시간 표시(db `ops/last_run`)
+- PC·앱을 쓸 수 없으면 Claude 앱에 붙여 넣을 프롬프트 표시(`ops/APP_PROMPT.md`)
+- `collector/browser/taas_update.js`(새 연도만 v9 직접 조회, base64 조각 내보내기), `ops/AUTO_UPDATE.md`·`status.py`·`verify.py`(DuckDB)·`publish_plan.py`
+- 게시된 패널에서 CSV·PNG 저장은 다운로드 확인 창으로 동작
+
 ## 2026-11-15 — v1.1 패널 업데이트 버튼
 
 - `serve.py`: 로컬 서버(127.0.0.1)로 패널을 열고, 버튼으로 git pull(또는 zip) → build.py 실행

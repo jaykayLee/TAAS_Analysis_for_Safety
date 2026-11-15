@@ -186,6 +186,30 @@ table.grid td{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
 .updinfo .new{color:var(--crit);font-weight:600}
 .updinfo .ok{color:var(--good)}
 .updinfo .run{color:var(--sign);font-weight:600}
+.dlg{position:fixed;inset:0;z-index:70;background:rgba(10,14,20,.45);display:grid;place-items:center;padding:16px}
+.dlg[hidden]{display:none}
+.dlgbox{background:var(--surface);color:var(--fg);border:1px solid var(--line-strong);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:min(720px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:16px 18px}
+.dlghead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dlghead h3{margin:0;font-size:17px}
+.dlgsub{font-size:12px;color:var(--fg-2);margin:4px 0 10px}
+.steps{list-style:none;margin:8px 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.steps li{border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px;color:var(--muted);background:var(--bg);position:relative}
+.steps li b{display:block;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.steps li.done{border-color:var(--good);color:var(--fg)} .steps li.done b::after{content:' ✓';color:var(--good)}
+.steps li.on{border-color:var(--sign);color:var(--fg);box-shadow:inset 0 0 0 1px var(--sign);background:var(--sign-soft)} .steps li.on b::after{content:' …';color:var(--sign)}
+.steps li.fail{border-color:var(--crit);color:var(--fg)} .steps li.fail b::after{content:' !';color:var(--crit)}
+.dlgmsg{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--surface-2);margin:8px 0;min-height:20px}
+.dlgmsg .bad{color:var(--crit);font-weight:600} .dlgmsg .ok{color:var(--good);font-weight:600} .dlgmsg .run{color:var(--sign);font-weight:600}
+.dlgrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.btn.warn{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.dlgnote{font-size:12px;color:var(--fg-2);line-height:1.55}
+.appbox{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:10px;background:var(--bg)}
+.appbox[open]{border-color:var(--amber)}
+.appbox summary{cursor:pointer;font-weight:600;font-size:13px}
+.appbox ol{margin:8px 0;padding-left:20px;font-size:12.5px;color:var(--fg-2)}
+.appbox textarea{width:100%;font:12px/1.5 var(--mono);border:1px solid var(--line-strong);border-radius:6px;padding:8px;background:var(--surface);color:var(--fg);resize:vertical}
+@media (max-width:560px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .empty{padding:28px;text-align:center;color:var(--fg-2);border:1px dashed var(--line-strong);border-radius:var(--r);background:var(--surface)}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 .serieslist{display:flex;flex-direction:column;gap:6px}
@@ -394,6 +418,19 @@ table.corr td.sel{outline:2px solid var(--fg)}
 </div>
 </div>
 
+<div class="dlg" id="updDlg" hidden role="dialog" aria-modal="true" aria-labelledby="updDlgT"><div class="dlgbox">
+  <div class="dlghead"><h3 id="updDlgT">데이터 업데이트</h3><button class="iconbtn" id="updClose" type="button" aria-label="닫기">×</button></div>
+  <div class="dlgsub" id="updVer"></div>
+  <ol class="steps" id="updSteps"><li data-s="1"><b>1</b>실행 환경 확인</li><li data-s="2"><b>2</b>브라우저 실행</li><li data-s="3"><b>3</b>수집</li><li data-s="4"><b>4</b>업데이트 (빌드·검증·게시)</li></ol>
+  <div class="dlgmsg" id="updMsg" role="status"></div>
+  <div class="dlgrow"><button class="btn primary" id="updFire" type="button">▶ 지금 갱신 실행</button><button class="btn" id="updRefresh" type="button">상태 새로고침</button></div>
+  <div class="dlgnote" id="updEnv"></div>
+  <details class="appbox" id="appBox"><summary>Claude 앱에서 직접 실행 — PC 브라우저를 쓸 수 없다고 나올 때</summary>
+    <ol><li>PC에서 <b>Claude 데스크톱 앱</b>을 열고, 이 컴퓨터에 연결된 새 대화를 시작합니다.</li><li>아래 프롬프트를 복사해 붙여 넣고 보냅니다.</li><li>Claude가 앱 브라우저로 TAAS를 열어 수집하고, 진행 상태는 이 창에 그대로 표시됩니다.</li></ol>
+    <textarea id="appPrompt" readonly rows="8" aria-label="Claude 앱에 붙여 넣을 프롬프트"></textarea>
+    <div class="dlgrow"><button class="btn primary small" id="appCopy" type="button">프롬프트 복사</button><span class="dlgnote" id="appCopied"></span></div>
+  </details>
+</div></div>
 <span class="toast" id="toast" role="status" aria-live="polite"></span>
 <script>
 /*__SAMPLE__*/
@@ -444,14 +481,19 @@ async function getPattern(pid){
   let obj=null;
   if(S.mode==='local'){obj=await loadScript(pid)}
   else if(S.mode==='sample'){obj=(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid])||null}
+  else if(S.mode==='online'){obj=await fetchGz(`panel/p${pid}.json.gz`)}
   else{const f=S.files.get(pid); if(f) obj=JSON.parse(await gunzipText(f))}
   if(obj){obj.n=obj.v.length; S.cache.set(pid,obj)}
   return obj;
 }
+async function fetchGz(url){ // 게시된 패널: 장표 파일을 열 때 받아 풂 (서버가 이미 풀어 보내면 그대로)
+  try{ const r=await fetch(url,{cache:'force-cache'}); if(!r.ok) return null; const buf=await r.arrayBuffer(); const u=new Uint8Array(buf);
+    const txt=(u[0]===0x1f&&u[1]===0x8b)?await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text():new TextDecoder().decode(u);
+    return JSON.parse(txt) }catch(e){ console.error(e); return null } }
 function meta(pid){return S.index.patterns.find(p=>p.pid===pid)}
 function hasData(pid){
   if(S.mode==='sample') return !!(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid]);
-  if(S.mode==='local'){const p=meta(pid);return !!(p&&p.n_facts>0)}
+  if(S.mode==='local'||S.mode==='online'){const p=meta(pid);return !!(p&&p.n_facts>0)}
   return S.files.has(pid)}
 
 /* ---------- 헤더/트리 ---------- */
@@ -463,7 +505,7 @@ function renderStat(){
   const tip=`장표 ${nd}/${n} · 셀 ${fmt.format(I.n_facts)}${I.built_at?' · 만든 날 '+I.built_at.slice(0,10):''}`;
   el.innerHTML=S.mode==='sample'
     ?`<span class="pill sample" title="${esc(tip)}">예시 데이터 <b>${yr}</b></span><span>라이브러리 폴더를 열면 전체 장표</span>`
-    :`<span class="pill live" title="${esc(tip)}">적용 라이브러리 <b>${yr}</b></span>`;
+    :`<span class="pill live" title="${esc(tip)}">${S.mode==='online'?'온라인 라이브러리':'적용 라이브러리'} <b>${yr}</b></span>`;
 }
 function renderTree(){
   const q=$('#q').value.trim(), box=$('#tree'); box.innerHTML='';
@@ -1136,9 +1178,9 @@ function addResults(m){ const rows=S.cur[m]||[]; if(!rows.length) return toast('
   rows.forEach(r=>S.results.push({run_id:id,...r,실행시각:ts})); saveResults(); toast(`${MNAME[m]} 결과 ${rows.length}행을 결과 모음에 담았습니다.`) }
 function toCSV(rows){ const q=v=>{v=v==null?'':String(typeof v==='number'?(isFinite(v)?+v.toPrecision(10):''):v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   return '﻿'+[RCOLS.join(','),...rows.map(r=>RCOLS.map(c=>q(r[c])).join(','))].join('\r\n') }
-function saveFile(name,text,type){ const b=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000) }
+function saveFile(name,text,type){ saveBlob(name,new Blob([text],{type})) }
 const stamp=()=>new Date().toISOString().slice(0,10).replace(/-/g,'');
-function saveCur(m){ const rows=(S.cur[m]||[]).map(r=>({run_id:'(미저장)',...r,실행시각:new Date().toLocaleString('sv-SE')})); if(!rows.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_${MNAME[m]}_${stamp()}.csv`,toCSV(rows),'text/csv;charset=utf-8'); toast('CSV로 저장했습니다.') }
+function saveCur(m){ const rows=(S.cur[m]||[]).map(r=>({run_id:'(미저장)',...r,실행시각:new Date().toLocaleString('sv-SE')})); if(!rows.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_${MNAME[m]}_${stamp()}.csv`,toCSV(rows),'text/csv;charset=utf-8') }
 function mRes(){
   const f=$('#rFilter').value, rows=S.results.filter(r=>!f||r.기법===f);
   const runs=[...new Set(S.results.map(r=>r.run_id))];
@@ -1181,6 +1223,11 @@ function renderTech(){
    클릭 = 기준선 M1 (가장 가까운 점에 맞춤, 형광 노랑) · Ctrl+클릭 = 비교선 M2 (형광 하늘) 와 계열별 차이
    드래그 = 구간 확대 · Ctrl+휠 = 확대/축소 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기 · Esc = 기준선 지우기 */
 const MK=['#FFE600','#00E5FF'];
+/* 파일 저장: 게시된 패널(claude.ai)에서는 downloads 기능(보는 사람이 확인 후 저장), 파일로 연 패널은 일반 다운로드 */
+let DL=null; try{ if(window.claude&&window.claude.use) window.claude.use('downloads').then(d=>{DL=d},()=>{}) }catch(e){}
+function saveBlob(name,blob){
+  if(DL){ DL.save({filename:name,data:blob}).then(()=>toast('저장했습니다: '+name),e=>{ const c=e&&e.code; toast(c==='declined'?'저장을 취소했습니다.':'저장하지 못했습니다 ('+(c||'오류')+').',c!=='declined') }); return }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast('저장했습니다: '+name) }
 function makeCtl(id,xy,barSel){
   const cv=$('#'+id); if(!cv) return null; const box=cv.parentElement, bar=$(barSel||(xy?'#sbar':'#mbar'));
   const C={xy,m:[],view:null,hover:null,drag:null,notes:[],hidden:new Set(),chart:null,names:null,_key:null,_clk:[],_hk:null};
@@ -1270,7 +1317,7 @@ function makeCtl(id,xy,barSel){
     C.notes.forEach(n=>{ if(!n.text||n.el.style.display==='none') return; const l=(parseFloat(n.el.style.left)+6)*dpr, t=parseFloat(n.el.style.top)*dpr+top;
       x.font=`${12*dpr}px ${css('--font')||'sans-serif'}`; const L=n.text.split('\n'), w=Math.max(...L.map(s=>x.measureText(s).width))+12*dpr, h=(L.length*16+8)*dpr;
       x.fillStyle='#fff8c4'; x.fillRect(l,t-h/2,w,h); x.strokeStyle='#d9b800'; x.lineWidth=dpr; x.strokeRect(l,t-h/2,w,h); x.fillStyle='#1a1400'; L.forEach((s,i)=>x.fillText(s,l+6*dpr,t-h/2+(16*(i+1)-2)*dpr)) });
-    o.toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=(title||'chart').replace(/[\\/:*?"<>|]/g,'_').slice(0,90)+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000) }); toast('PNG로 저장했습니다.') };
+    o.toBlob(b=>{ if(b) saveBlob((title||'chart').replace(/[\\/:*?"<>|]/g,'_').slice(0,90)+'.png',b) }) };
   // 이벤트
   cv.addEventListener('mousedown',e=>{ if(e.button!==0||!ch()) return; const p=P(e); if(!inA(p)) return; e.preventDefault(); C.drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y,moved:false} });
   window.addEventListener('mousemove',e=>{ const c=ch(); if(!c) return; const p=P(e);
@@ -1351,8 +1398,8 @@ document.querySelectorAll('#stabs button').forEach(b=>b.onclick=()=>{S.mtab=b.da
 document.querySelectorAll('.presets [data-y]').forEach(b=>b.onclick=()=>{$('#iYear').value=b.dataset.y;renderMethods()});
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addResults(b.dataset.add));
 document.querySelectorAll('[data-csv]').forEach(b=>b.onclick=()=>saveCur(b.dataset.csv));
-$('#rCsv').onclick=()=>{const f=$('#rFilter').value,rows=S.results.filter(r=>!f||r.기법===f); if(!rows.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_결과모음${f?'_'+f:''}_${stamp()}.csv`,toCSV(rows),'text/csv;charset=utf-8'); toast('CSV로 저장했습니다.')};
-$('#rJson').onclick=()=>{ if(!S.results.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_결과모음_${stamp()}.json`,JSON.stringify({columns:RCOLS,saved:new Date().toISOString(),rows:S.results},null,1),'application/json'); toast('JSON으로 저장했습니다.')};
+$('#rCsv').onclick=()=>{const f=$('#rFilter').value,rows=S.results.filter(r=>!f||r.기법===f); if(!rows.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_결과모음${f?'_'+f:''}_${stamp()}.csv`,toCSV(rows),'text/csv;charset=utf-8')};
+$('#rJson').onclick=()=>{ if(!S.results.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_결과모음_${stamp()}.json`,JSON.stringify({columns:RCOLS,saved:new Date().toISOString(),rows:S.results},null,1),'application/json')};
 $('#rClear').onclick=()=>{ if(!S.results.length) return; S.results=[]; saveResults(); renderMethods(); toast('결과 모음을 비웠습니다.')};
 $('#btnCkClear').onclick=()=>{S.checked.clear(); saveChecked(); renderTree()};
 $('#btnOpen').onclick=()=>$('#pickDir').click();
@@ -1408,14 +1455,102 @@ async function runUpdate(){
     if(j.state==='done'){ clearInterval(UPD.poll); if(j.changed){ toast('업데이트 완료 — 새 버전으로 다시 엽니다.'); setTimeout(()=>location.reload(),1200) } else toast('이미 최신 버전입니다 (패널만 다시 만들었습니다).') }
     else if(j.state==='error'){ clearInterval(UPD.poll); toast('업데이트 실패: '+j.error,true) } },1500);
 }
-$('#btnUpd').onclick=runUpdate;
-updStatus(); setInterval(()=>{ if(!UPD.poll||!UPD.st||!UPD.st.job||UPD.st.job.state!=='running') updStatus() },10*60*1000);
 
-window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD}); // 검증·자동화용
+/* ---------- 게시된 패널(claude.ai)의 [업데이트] — Claude 예약 작업 실행 + 진행 상태 + Claude 앱 프롬프트 ----------
+   흐름: 버튼 → ① 실행 환경 확인 → ② 브라우저 실행 → ③ 수집 → ④ 업데이트.  진행 상태는 예약 작업이 이 패널의 db(ops/last_run)에 기록.
+   PC·Claude 앱이 꺼져 있으면 상태 needs_app → 'Claude 앱에서 직접 실행' 프롬프트를 열어 줌. */
+const AUTO=window.TAAS_AUTO||null, SRV='Claude Code Remote';
+const UO={mcp:null,doc:null,task:null,env:'',armed:false,firedAt:0,dbOk:null};
+const ST_NM={requested:'실행 요청됨',env_check:'실행 환경 확인 중',browser:'브라우저 실행 중',collect:'수집 중',build:'빌드·검증 중',publish:'패널 다시 게시 중',done:'완료',no_new_data:'새 자료 없음 — 이미 최신',needs_app:'Claude 앱에서 진행이 필요합니다',error:'오류로 멈춤'};
+const RUNNING=new Set(['requested','env_check','browser','collect','build','publish']);
+const isOnline=()=>S.mode==='online'&&!!AUTO;
+const when=t=>{ if(!t) return '–'; const d=new Date(t); return isNaN(d)?String(t):d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) };
+function mcpErr(e){ const c=(e&&e.code)||''; return ({server_not_connected:'Claude Code Remote 커넥터가 없습니다 — claude.ai 설정 → 커넥터에서 추가하세요.',needs_reauth:'Claude Code Remote 연결이 만료됐습니다 — claude.ai 설정 → 커넥터에서 다시 연결하세요.',
+  not_in_manifest:'이 패널의 Claude Code Remote 사용이 허용되지 않았습니다 — 버튼을 다시 눌러 허용하세요.',approval_required:'허용이 필요합니다 — 버튼을 다시 눌러 허용하세요.',consent_required:'허용이 필요합니다 — 버튼을 다시 눌러 허용하세요.',
+  blocked_by_policy:'조직 정책으로 이 기능이 막혀 있습니다.',selection_required:'같은 이름의 커넥터가 여러 개입니다 — 안내 창에서 하나를 고르세요.',tool_error:'작업 실행 오류: '+esc((e&&e.message)||'')})[c]||('연결 오류('+esc(c||'unknown')+') — 잠시 뒤 상태 새로고침을 누르세요.') }
+function docState(){ const d=UO.doc||{}; let st=d.status||''; const age=d.updated?Date.now()-new Date(d.updated).getTime():1e12;
+  if(RUNNING.has(st)&&age>3*3600e3) st='stale'; return {d,st} }
+function renderUpdOnline(){
+  const b=window.TAAS_BUILD, {d,st}=docState(), el=$('#updInfo'), btn=$('#btnUpd'); $('#upd').hidden=false;
+  const run=RUNNING.has(st);
+  btn.disabled=false; btn.textContent=run?'갱신 중…':(st==='needs_app'||st==='error'?'업데이트 ●':'업데이트'); btn.classList.toggle('pending',st==='needs_app'||st==='error');
+  const l1=b?`업데이트 <b>${esc(fmtT(b.built_at))}</b> · 버전 <b>${esc((b.commit||'').slice(0,7)||'–')}</b>`:'버전 정보 없음';
+  let l2=st?`<span class="${run?'run':st==='done'||st==='no_new_data'?'ok':'new'}">${esc(ST_NM[st]||(st==='stale'?'이전 실행 응답 없음':st))}</span> · ${esc(when(d.updated||d.finished))}`:'아직 자동 갱신 기록 없음';
+  el.innerHTML=l1+'<br>'+l2;
+  if(!$('#updDlg').hidden) renderDlg();
+}
+function renderDlg(){
+  const b=window.TAAS_BUILD, {d,st}=docState(), step=+d.step||0, run=RUNNING.has(st);
+  $('#updVer').innerHTML=`지금 패널: 업데이트 ${esc(fmtT(b&&b.built_at))} · 버전 ${esc(b&&b.commit?b.commit.slice(0,7):'–')} (${esc(fmtT(b&&b.commit_date).slice(0,10))}) · 데이터 ${esc(S.index?S.index.year_min+'~'+S.index.year_max:'–')}`;
+  document.querySelectorAll('#updSteps li').forEach(li=>{ const n=+li.dataset.s; li.className='';
+    if(!st||st==='stale') return;
+    if(st==='done'||st==='no_new_data') li.className=n<=(st==='done'?4:3)||n<=step?'done':'';
+    else if(st==='needs_app'||st==='error') li.className=n<step?'done':n===step?'fail':'';
+    else li.className=n<step?'done':n===step?'on':'' });
+  let m='';
+  if(!st) m='아직 자동 갱신을 실행한 기록이 없습니다.';
+  else if(st==='stale') m=`<span class="bad">이전 실행(${esc(when(d.updated))})이 3시간 넘게 응답이 없습니다.</span> 다시 실행하거나 아래 Claude 앱 프롬프트로 진행하세요.`;
+  else m=`<span class="${run?'run':st==='done'||st==='no_new_data'?'ok':'bad'}">${esc(ST_NM[st]||st)}</span>${d.message?' — '+esc(d.message):''}<br><span class="dlgnote">${d.source==='app'?'Claude 앱':'예약 작업'} · 시작 ${esc(when(d.started))}${d.finished?' · 종료 '+esc(when(d.finished)):' · 최근 '+esc(when(d.updated))}${d.version?' · 반영 버전 '+esc(String(d.version).slice(0,7)):''}</span>`;
+  if(UO.dbOk===false) m+='<br><span class="dlgnote">진행 상태를 읽을 수 없는 화면입니다 (claude.ai에 게시된 패널에서 열면 보입니다).</span>';
+  $('#updMsg').innerHTML=m;
+  $('#updEnv').innerHTML=UO.env;
+  const fire=$('#updFire'), recent=Date.now()-UO.firedAt<10*60e3;
+  fire.disabled=!UO.mcp||run||recent||(UO.task&&!UO.task.enabled); if(!UO.armed) fire.textContent=run?'갱신 진행 중':'▶ 지금 갱신 실행';
+  $('#appPrompt').value=(d.prompt&&st==='needs_app'?d.prompt:(AUTO&&AUTO.app_prompt)||'');
+  if(st==='needs_app'||!UO.mcp) $('#appBox').open=true;
+}
+async function precheck(){
+  if(!UO.mcp){ UO.env='이 화면에서는 버튼으로 실행할 수 없습니다 (claude.ai에 게시된 패널에서 연결을 허용해야 합니다). 아래 <b>Claude 앱에서 직접 실행</b> 프롬프트로 진행하세요.'; renderDlg(); return }
+  UO.env='예약 작업 확인 중…'; renderDlg();
+  try{ const r=await UO.mcp.callTool(SRV,'list_triggers',{limit:100},{cache:false}); const p=r.payload||{}, L=p.data||p.triggers||[];
+    const t=L.find(x=>x.id===AUTO.trigger_id); UO.task=t||null;
+    if(!t){ UO.env=`<span class="bad">예약 작업 “${esc(AUTO.task_name)}”을 찾지 못했습니다</span> — 지워졌거나 다른 계정입니다. 아래 Claude 앱 프롬프트로 진행하세요.` }
+    else { const lr=t.last_run, s=lr?String(lr.status||'').replace(/^ROUTINE_RUN_STATUS_/,''):'';
+      const KO={PENDING:'시작 대기',RUNNING:'세션 실행 중',SUCCEEDED:'세션 시작됨',FAILED:'시작 실패',CANCELLED:'취소',TIMED_OUT:'시간 초과'};
+      UO.env=`예약 작업 <b>${esc(t.name)}</b>${t.enabled?'':' <span class="bad">(꺼짐)</span>'} · 이 PC 필요 · 마지막 실행 ${lr?esc(KO[s]||s)+' ('+esc(when(lr.fired_at))+')':'없음'}<br>`+
+        '실행하면 새 Claude 세션이 ① PC 연결·브라우저를 확인하고 ② TAAS 페이지를 열어 ③ 저장소에 없는 새 연도만 수집한 뒤 ④ 빌드·검증해 GitHub에 올리고 이 패널을 새 버전으로 다시 게시합니다. 새 연도가 있으면 약 40~60분, 없으면 몇 분 · 계정 사용량 사용.' }
+  }catch(e){ UO.env=mcpErr(e) }
+  renderDlg();
+}
+async function fireUpdate(){
+  const fire=$('#updFire');
+  if(!UO.armed){ UO.armed=true; fire.textContent='확인 — 실행'; fire.classList.add('warn'); setTimeout(()=>{ if(UO.armed){UO.armed=false;fire.classList.remove('warn');renderDlg()} },8000); return }
+  UO.armed=false; fire.classList.remove('warn'); fire.disabled=true; fire.textContent='실행 요청 중…';
+  const runId='panel-'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15);
+  try{ await UO.mcp.callTool(SRV,'fire_trigger',{trigger_id:AUTO.trigger_id,text:`패널 '지금 갱신' 버튼으로 실행 · run_id=${runId} · 패널 버전 ${(window.TAAS_BUILD||{}).commit||''} · 요청 ${new Date().toISOString()}`},{cache:false});
+    UO.firedAt=Date.now(); UO.env='<span class="run">실행을 요청했습니다.</span> 1~2분 안에 ① 실행 환경 확인이 시작되고, 단계가 바뀔 때마다 이 창에 표시됩니다. PC 브라우저를 쓸 수 없으면 아래 프롬프트가 열립니다.';
+    setTimeout(precheck,20000) }
+  catch(e){ const amb=e&&(e.code==='server_unavailable'||e.code==='upstream_error'||e.code==='cancelled');
+    UO.env=amb?'<span class="bad">실행 여부를 확인하지 못했습니다</span> — 다시 누르기 전에 ‘상태 새로고침’으로 진행 중인지 확인하세요.':mcpErr(e) }
+  renderDlg();
+}
+function openUpdDlg(){ $('#updDlg').hidden=false; renderDlg(); precheck(); setTimeout(()=>$('#updClose').focus(),0) }
+$('#updClose').onclick=()=>{$('#updDlg').hidden=true; $('#btnUpd').focus()};
+$('#updDlg').addEventListener('click',e=>{ if(e.target.id==='updDlg') $('#updClose').click() });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#updDlg').hidden) $('#updClose').click() });
+$('#updRefresh').onclick=precheck;
+$('#updFire').onclick=fireUpdate;
+$('#appCopy').onclick=async()=>{ const t=$('#appPrompt'); try{ await navigator.clipboard.writeText(t.value); $('#appCopied').textContent='복사했습니다 — Claude 앱 새 대화에 붙여 넣으세요.' }catch(e){ t.focus(); t.select(); $('#appCopied').textContent='선택했습니다 — Ctrl+C 로 복사하세요.' } };
+function initOnlineUpd(){
+  if(!isOnline()) return; renderUpdOnline();
+  const cl=window.claude; if(!cl||!cl.use){ UO.dbOk=false; return }
+  cl.use('mcp').then(m=>{UO.mcp=m; renderUpdOnline()},()=>{});
+  cl.use('db').then(db=>{ if(!db){UO.dbOk=false; renderUpdOnline(); return}
+    const tm=setTimeout(()=>{ if(UO.dbOk===null){UO.dbOk=false; renderUpdOnline()} },10000);
+    db.doc('ops/last_run').onSnapshot(sn=>{ clearTimeout(tm); UO.dbOk=true; UO.doc=sn.exists?sn.data():null; renderUpdOnline() }, ()=>{ clearTimeout(tm); UO.dbOk=false; renderUpdOnline() }) },()=>{UO.dbOk=false});
+}
+
+$('#btnUpd').onclick=()=>isOnline()?openUpdDlg():runUpdate();
+if(!window.TAAS_ONLINE){ updStatus(); setInterval(()=>{ if(!UPD.poll||!UPD.st||!UPD.st.job||UPD.st.job.state!=='running') updStatus() },10*60*1000) }
+
+window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD,UO}); // 검증·자동화용
 /* ---------- 시작: 라이브러리 폴더 안이면 바로, 아니면 예시 데이터 ---------- */
-if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local'}
-else if(window.TAAS_SAMPLE){S.index=window.TAAS_SAMPLE.index;S.mode='sample'}
-renderStat();renderTree();renderTech();renderCorr();
-if(S.index){const f=S.index.patterns.find(p=>hasData(p.pid)&&p.pid===7019)||S.index.patterns.find(p=>hasData(p.pid));if(f)selectPattern(f.pid)}
+function startWith(){ renderStat();renderTree();renderTech();renderCorr();
+  if(S.index){const f=S.index.patterns.find(p=>hasData(p.pid)&&p.pid===7019)||S.index.patterns.find(p=>hasData(p.pid));if(f)selectPattern(f.pid)} }
+if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local';startWith()}
+else if(window.TAAS_ONLINE){ S.mode='online'; $('#btnOpen').hidden=$('#btnOpenFiles').hidden=true; $('#tree').innerHTML='<div class="sub">장표 목록을 불러오는 중…</div>';
+  initOnlineUpd(); fetch('index.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(idx=>{S.index=idx;startWith();renderUpdOnline()})
+    .catch(e=>{ $('#tree').innerHTML='<div class="sub">장표 목록을 불러오지 못했습니다 ('+esc(String(e))+'). 새로 고침해 보세요.</div>' }) }
+else { if(window.TAAS_SAMPLE){S.index=window.TAAS_SAMPLE.index;S.mode='sample'} startWith() }
 })();
 </script>
