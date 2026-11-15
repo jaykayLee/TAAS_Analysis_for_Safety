@@ -1,0 +1,16 @@
+# 생성물
+library/
+library.building/
+*.bak_*
+out/
+# 파이썬·노드
+__pycache__/
+*.pyc
+node_modules/
+# 수집기 작업 파일
+collector/taas_collect.sqlite*
+collector/*.json.gz
+# 기타
+.DS_Store
+Thumbs.db
+~$*

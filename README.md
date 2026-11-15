@@ -1,0 +1,82 @@
+# TAAS Analysis for Safety
+
+한국도로교통공단 **TAAS 교통사고 상세통계(338개 장표, 2005~2025)** 와 **통계청 연령별 인구**를 하나의 라이브러리로 모아,
+브라우저 패널에서 탐색 · 상관관계 · 5가지 통계 기법으로 분석하고 차량 안전기술(ADAS 등)과 연결해 보는 프로젝트입니다.
+
+- 라이브러리: 장표 340개 · 셀 30,249,410개 · 2005~2025년 (TAAS 338 + 인구 2)
+- 패널: 탐색 / 상관관계 분석 / 통계 기법(추세·그레인저·다중회귀·주성분·중단 시계열) / 차량기술 매핑
+- 결과 내보내기: 통계 기법 결과를 같은 13열 형식(CSV/JSON)으로 모아 기법별로 합칠 수 있음
+
+## 빠른 시작
+
+```bat
+git clone https://github.com/jaykayLee/TAAS_Analysis_for_Safety.git
+cd TAAS_Analysis_for_Safety
+pip install -r requirements.txt
+python build.py            :: 처음 한 번 약 5분 → library\ 생성
+library\panel.html         :: 더블클릭
+```
+
+Windows 에서는 `빌드_실행.bat` 을 더블클릭해도 됩니다.
+
+## 업데이트 (git)
+
+```bat
+git pull
+python build.py            :: 원본이 바뀌었으면 전체 조립, 패널만 바뀌었으면 수 초 안에 끝남
+```
+
+`build.py` 는 `library\.build_manifest.json` 에 원본 해시를 남겨, 원본(`data/raw`)이나 조립 스크립트가 바뀐 경우에만 데이터를 다시 만듭니다.
+`library\` 는 생성물이라 git 에 올리지 않습니다.
+
+### 새 연도(예: 2026) 통계가 공개되면
+
+1. `collector\` 로 2026년을 수집하고 원본을 내보냅니다 → `taas_raw_full_2026.json.gz`
+   ```bat
+   cd collector
+   python -m taas_collector run --from 2026 --to 2026 --refresh-meta
+   python -m taas_collector export ..\data\raw\taas\taas_raw_full_2026.json.gz --from 2026 --to 2026
+   ```
+2. `python build.py` → 새 원본이 자동 포함됩니다. 같은 장표·구간이 겹치면 **더 늦게 수집한 값**이 쓰입니다(2025년 확정치 재수집 등).
+3. 검증(아래) 후 `data/raw/taas/` 의 새 파일과 `CHANGELOG.md` 를 커밋합니다.
+
+## 폴더 구성
+
+| 경로 | 내용 |
+|---|---|
+| `build.py`, `빌드_실행.bat` | 원본 → 라이브러리·패널 한 번에 만들기 |
+| `data/raw/taas/` | TAAS 수집 원본 (5년 단위 json.gz) |
+| `data/raw/population/` | 통계청 인구를 라이브러리 형식으로 바꾼 원본 (장표 9001·9002) |
+| `data/source/kosis/` | 통계청 KOSIS 원본 엑셀 (`python build.py --pop` 으로 인구 원본 재생성) |
+| `src/` | 라이브러리 조립(`build_library.py`), 패널 생성(`build_panel.py`), 새 연도 통합(`update_library.py`), 엑셀(`build_excel.py`), 인구 변환(`make_pop_raw.py`), Python 로더(`taas.py`) |
+| `panel/panel_template.html` | 분석 패널 원본 (모든 화면 기능·통계 기법 코드) |
+| `collector/` | TAAS 수집기 (Python + Playwright, v9 직접 조회 전략) |
+| `docs/` | 사용 매뉴얼(pptx)과 매뉴얼 생성 코드, 수집 현황·2025 엑셀·분석 결과 |
+| `tests/` | 패널 자동 시험(Playwright), 통계 기법 계산 검증(statsmodels·pymannkendall 대조) |
+| `library/` | **생성물 (git 제외)** — `panel.html`, `index.js`, `panel_js/`, `parquet/` 등 |
+
+## 데이터
+
+| 장표 | 출처 | 비고 |
+|---|---|---|
+| 1~7322 (338개) | [TAAS 교통사고분석시스템 › 교통사고 상세통계](https://taas.koroad.or.kr/sta/acs/exs/typical.do?menuId=WEB_KMP_OVT_UAS_ASA) | 수치항목 6종(사고·사망·부상·중상·경상·부상신고) 모두 켬, 조건 필터 없음 |
+| 9001 연령구분별 인구 (어린이·일반·노인) | 통계청 KOSIS 「인구총조사」 | 어린이 0~12세(TAAS 기준)는 5세 단위 자료로 **추정**: 0~4 + 5~9 + 10~14×3/5 |
+| 9002 연령별 인구 (5세 단위) | 〃 | 2005·2010년 외국인 제외 / 2015년~ 외국인 포함 — 2010→2015 사이 수준 차이 |
+
+- 인구 실측 연도: 2005, 2010, 2015~2025 (2006~09·2011~14는 `인구_연간보간[명]` 수치로 직선 보간, 실측 아님)
+- Python: `from taas import Taas; t = Taas("library"); t.search("어린이")` (자세한 사용법은 `src/LIBRARY_README.md`)
+
+## 검증
+
+```bat
+python tests\stats\verify_stats.py      :: 통계 기법 계산값을 statsmodels 등과 대조 (패널 시험 결과 파일 필요)
+python tests\panel\test_stats.py library out\st   :: 패널에서 5개 기법 실행 (Playwright)
+python collector\tests\test_parser.py   :: TAAS 응답 파서
+```
+
+라이브러리 점검 기준: 연도별 전국 사고건수(2025 = 193,889건) 장표 간 일치, 부상 = 중상 + 경상 + 부상신고, 중복 셀 0.
+
+## 주의
+
+- 공개 통계를 화면과 같은 경로로 조회하지만, 사이트 약관과 서버 부하를 고려해 수집기를 동시에 여러 개 돌리지 마세요.
+- 상관·선행 관계(그레인저)는 인과가 아닙니다. TAAS 경찰 DB에는 차량의 ADAS 장착 여부가 없습니다.

@@ -1,0 +1,1365 @@
+<title>TAAS 교통사고 분석 패널</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: 좌측 장표 트리 + 우측 작업영역(탭: 탐색 / 상관분석 / 차량기술 매핑). 도로표지 계열의 표지청·안전황색을 강조색으로. */
+:root{
+  --bg:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f4; --line:#d8dee5; --line-strong:#b9c3ce;
+  --fg:#111820; --fg-2:#4a5663; --muted:#7b8794;
+  --sign:#1d5fae; --sign-ink:#ffffff; --sign-soft:#e3edf9; --amber:#f2b705; --amber-ink:#1a1400;
+  --crit:#d03b3b; --good:#0b8a0b;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --div-neg:#2a78d6; --div-mid:#f0efec; --div-pos:#e34948;
+  --font:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1419; --surface:#161c23; --surface-2:#1d252e; --line:#2a333d; --line-strong:#3a4551;
+  --fg:#e8edf2; --fg-2:#b3bfcb; --muted:#8693a0;
+  --sign:#4d8fe0; --sign-ink:#0b1420; --sign-soft:#1b2b40; --amber:#f2b705; --amber-ink:#1a1400;
+  --crit:#e66767; --good:#2cbf2c;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --div-neg:#3987e5; --div-mid:#383835; --div-pos:#e66767; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1419; --surface:#161c23; --surface-2:#1d252e; --line:#2a333d; --line-strong:#3a4551;
+  --fg:#e8edf2; --fg-2:#b3bfcb; --muted:#8693a0;
+  --sign:#4d8fe0; --sign-ink:#0b1420; --sign-soft:#1b2b40; --amber:#f2b705; --amber-ink:#1a1400;
+  --crit:#e66767; --good:#2cbf2c;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --div-neg:#3987e5; --div-mid:#383835; --div-pos:#e66767; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--font)}
+*{box-sizing:border-box}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.app{display:grid;grid-template-rows:auto 1fr;height:100%}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.plate{background:var(--sign);color:var(--sign-ink);font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:4px;border:2px solid var(--sign);box-shadow:inset 0 0 0 1.5px var(--sign-ink);font-size:13px}
+.brand h1{font-size:16px;margin:0;font-weight:600;text-wrap:balance}
+.libstat{font-size:12px;color:var(--fg-2);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.libstat b{font-family:var(--mono);font-weight:500;color:var(--fg)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface-2)}
+.pill.sample{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.pill.live{background:var(--sign-soft);border-color:var(--sign);color:var(--fg)}
+.spacer{flex:1}
+.btn{border:1px solid var(--line-strong);background:var(--surface);padding:6px 12px;border-radius:var(--r);cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--sign);border-color:var(--sign);color:var(--sign-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:3px 8px;font-size:12px}
+.main{display:grid;grid-template-columns:var(--side,300px) 6px minmax(0,1fr);min-height:0}
+.main.collapsed{grid-template-columns:36px 0 minmax(0,1fr)}
+aside.tree{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.treehead{display:flex;gap:6px;align-items:center;padding:10px 8px 10px 12px;border-bottom:1px solid var(--line)}
+.tree .search{flex:1;min-width:0}
+.tree input[type=search]{width:100%;padding:7px 10px;border:1px solid var(--line-strong);border-radius:var(--r);background:var(--bg)}
+.iconbtn{width:24px;height:24px;flex:none;display:grid;place-items:center;border:1px solid var(--line-strong);background:var(--surface);color:var(--fg-2);border-radius:4px;cursor:pointer;font-size:13px;line-height:1;padding:0}
+.iconbtn:hover{background:var(--surface-2);color:var(--fg)}
+.main.collapsed .tree .search,.main.collapsed .tree .list{display:none}
+.main.collapsed .treehead{justify-content:center;padding:10px 4px;border-bottom:0}
+.resizer{cursor:col-resize;border-left:1px solid var(--line);background:transparent;touch-action:none}
+.resizer:hover,.resizer.on{background:var(--sign-soft);border-left-color:var(--sign)}
+.main.collapsed .resizer{display:none}
+.tree .list{overflow:auto;padding:6px 0 24px;flex:1}
+.tree .listin{width:max-content;min-width:100%}
+.tree details{border-bottom:1px solid var(--line)}
+.tree summary{cursor:pointer;padding:7px 12px;font-weight:600;font-size:13px;display:flex;justify-content:flex-start;align-items:center;gap:8px;white-space:nowrap}
+.tree summary .n{font-family:var(--mono);color:var(--fg-2);font-weight:500;font-size:11px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:0 7px;line-height:18px;flex:none}
+.tree .sub{font-size:11px;color:var(--muted);padding:6px 12px 2px 20px;letter-spacing:.02em}
+.tree details.subgrp{border:0}
+.tree details.subgrp>summary{font-size:13px;font-weight:600;color:var(--fg);padding:6px 12px 5px 14px;gap:12px;list-style:none;background:var(--surface-2);border-top:1px solid var(--line)}
+.tree details.subgrp>summary::-webkit-details-marker{display:none}
+.tree details.subgrp>summary .nm::before{content:'▾';display:inline-block;width:14px;color:var(--sign);font-size:11px}
+.tree details.subgrp:not([open])>summary .nm::before{content:'▸'}
+.tree details.subgrp>summary:hover{background:var(--sign-soft)}
+.tree details.subgrp>summary .n{background:var(--surface)}
+.tree details.subgrp button.item{padding-left:30px}
+.tree button.item{display:block;width:100%;text-align:left;border:0;background:none;padding:5px 12px 5px 20px;font-size:13px;cursor:pointer;color:var(--fg-2);white-space:nowrap}
+.tree button.item:hover{background:var(--surface-2);color:var(--fg)}
+.tree button.item.on{background:var(--sign-soft);color:var(--fg);box-shadow:inset 3px 0 0 var(--sign)}
+.tree button.item.nodata{opacity:.45}
+.tree .irow{display:flex;align-items:center}
+.tree .irow input{margin:0 0 0 16px;flex:none;accent-color:var(--sign);cursor:pointer}
+.tree details.subgrp .irow input{margin-left:26px}
+.tree .irow button.item,.tree details.subgrp .irow button.item{padding-left:7px;flex:1}
+.tree .irow.ck{background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.pickbar{display:flex;gap:6px;align-items:center;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--fg-2);background:var(--surface-2);flex-wrap:wrap}
+.pickbar b{font-family:var(--mono);color:var(--fg)}
+.pickbar .sp{flex:1}
+.pickbar .btn:disabled{opacity:.45;cursor:default}
+.main.collapsed .pickbar{display:none}
+.sets{display:flex;flex-direction:column;gap:8px}
+.setbox{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:var(--bg)}
+.sethead{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.sethead b{font-size:13px}
+.setctl{display:flex;flex-wrap:wrap;gap:8px 12px}
+.setctl select{max-width:220px}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.subtabs button{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--fg-2)}
+.subtabs button[aria-selected=true]{background:var(--sign);border-color:var(--sign);color:var(--sign-ink);font-weight:600}
+.about{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;margin-bottom:12px;font-size:12.5px;color:var(--fg-2)}
+.about summary{cursor:pointer;font-weight:600;color:var(--fg)}
+.about div{margin-top:6px;line-height:1.65}
+.about b{color:var(--fg)}
+table.mtab td.nm{text-align:left;font-family:var(--font);max-width:300px;overflow:hidden;text-overflow:ellipsis}
+table.mtab td.nm.wrap{white-space:normal}
+table.mtab tr[data-n]{cursor:pointer}
+table.mtab tr.on td,table.mtab tr.on th{background:var(--sign-soft)}
+table.mtab td.pos{color:var(--crit);font-weight:600} table.mtab td.neg{color:var(--sign);font-weight:600}
+table.mtab td.sig{font-weight:700;color:var(--fg)}
+table.res td{font-size:11.5px}
+table.mtab thead th:nth-child(2){text-align:left}
+.xcks{display:flex;flex-wrap:wrap;gap:4px 12px;max-height:120px;overflow:auto;max-width:900px}
+.xck{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--fg-2);white-space:nowrap;letter-spacing:0}
+.cl{display:inline-block;min-width:20px;text-align:center;border-radius:4px;color:#fff;font-weight:700;font-size:11px;padding:0 5px}
+.sub2{font-size:13px;margin:14px 0 6px}
+.chartbox.sm{height:300px}
+.mout{overflow:auto}
+.work{min-width:0;min-height:0;overflow:auto;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.tabs button{border:0;background:none;padding:8px 14px;cursor:pointer;color:var(--fg-2);border-bottom:3px solid transparent;margin-bottom:-1px;font-weight:500}
+.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--sign)}
+.title-row{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
+.title-row h2{margin:0;font-size:20px;font-weight:700;text-wrap:balance}
+.crumb{font-size:12px;color:var(--muted)}
+.note{font-size:12px;color:var(--fg-2);background:var(--surface-2);border-left:3px solid var(--amber);padding:6px 10px;border-radius:0 var(--r) var(--r) 0;margin:8px 0}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin:12px 0}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field label,.lbl{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.field select,.field input{padding:5px 8px;border:1px solid var(--line-strong);border-radius:var(--r);background:var(--bg);max-width:260px}
+.field input[type=number]{width:80px}
+.yr{display:flex;gap:6px;align-items:center}
+.dimfilters{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+.dimbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-width:0;max-width:100%}
+.dimbox .head{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:4px}
+.dimbox .head .lbl b{color:var(--fg);font-size:12px;letter-spacing:0}
+.chips{display:flex;flex-wrap:wrap;gap:4px;max-height:132px;overflow:auto;max-width:720px}
+.chip{font-size:12px;border:1px solid var(--line-strong);background:var(--bg);border-radius:999px;padding:2px 9px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--sign);border-color:var(--sign);color:var(--sign-ink)}
+.chip.total{border-style:dashed}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:14px;min-width:0}
+.card h3{margin:0 0 8px;font-size:14px;font-weight:600}
+.chartbox{position:relative;height:380px;user-select:none}
+.chartbox canvas{cursor:crosshair}
+.charthead{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px}
+.charthead h3{margin:0}
+.ctools{display:flex;gap:6px;flex-wrap:wrap}
+.hint{font-size:11px;color:var(--muted);margin-top:6px}
+.legend span[data-k]{cursor:pointer;user-select:none}
+.legend span.off{opacity:.38;text-decoration:line-through}
+.mbar{margin-top:8px;font-size:12px;overflow:auto}
+.mbar:empty{display:none}
+.mbar table{border-collapse:collapse;font-size:12px;width:max-content;min-width:100%}
+.mbar th,.mbar td{padding:4px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
+.mbar th:first-child,.mbar td:first-child{text-align:left}
+.mbar td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.mbar .tag{display:inline-block;font-family:var(--mono);font-weight:700;font-size:11px;padding:0 6px;border-radius:3px;color:#111}
+.mbar .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.mbar .pos{color:var(--crit)} .mbar .neg{color:var(--sign)}
+.memo{position:absolute;z-index:5;background:#fff8c4;color:#1a1400;font-size:12px;line-height:1.35;padding:4px 7px;border:1px solid #d9b800;border-radius:3px;min-width:60px;max-width:220px;box-shadow:0 2px 6px rgba(0,0,0,.25);outline:none;transform:translate(6px,-50%);white-space:pre-wrap}
+.memo:empty::before{content:'메모 입력';color:#8a7d3a}
+.applyrow{display:flex;gap:10px;align-items:center}
+.applyrow label{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--fg-2);cursor:pointer;letter-spacing:0}
+#btnRun.pending{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 8px;font-size:12px;color:var(--fg-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tablewrap{overflow:auto;max-height:440px;border:1px solid var(--line);border-radius:var(--r)}
+table.grid{border-collapse:collapse;font-size:12px;width:max-content;min-width:100%}
+table.grid th,table.grid td{padding:5px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.grid thead th{position:sticky;top:0;background:var(--surface-2);text-align:right;font-weight:600;z-index:1}
+table.grid thead th:first-child,table.grid tbody th{text-align:left;position:sticky;left:0;background:var(--surface);z-index:2}
+table.grid thead th:first-child{background:var(--surface-2);z-index:3}
+table.grid td{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.toast{position:fixed;right:16px;bottom:16px;z-index:60;font-size:12.5px;color:var(--good);background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r);padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.15);max-width:min(460px,calc(100vw - 32px))}
+.toast:empty{display:none}
+.empty{padding:28px;text-align:center;color:var(--fg-2);border:1px dashed var(--line-strong);border-radius:var(--r);background:var(--surface)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.serieslist{display:flex;flex-direction:column;gap:6px}
+.sitem{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);font-size:12px}
+.sitem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sitem .ax{font-family:var(--mono);color:var(--muted)}
+.sitem input{margin:0}
+table.corr{border-collapse:separate;border-spacing:2px;font-size:12px}
+table.corr th{font-weight:500;color:var(--fg-2);padding:2px 6px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.corr td{width:58px;height:36px;text-align:center;font-family:var(--mono);border-radius:3px;cursor:pointer}
+table.corr td.sel{outline:2px solid var(--fg)}
+.stat{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--fg-2);margin-top:8px}
+.stat b{font-family:var(--mono);color:var(--fg);font-size:14px;font-weight:500}
+.techgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.tech{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.tech .t{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.tech h4{margin:0;font-size:14px}
+.tech .std{font-size:11px;font-family:var(--mono);color:var(--muted)}
+.tech p{margin:0;font-size:12px;color:var(--fg-2)}
+.tech .slice{font-size:12px;border-left:3px solid var(--amber);padding-left:8px}
+.tech .q{font-size:12px;color:var(--fg)}
+.tech .acts{display:flex;gap:6px;margin-top:auto;padding-top:4px}
+.drop{position:fixed;inset:0;background:color-mix(in srgb,var(--sign) 18%,transparent);border:3px dashed var(--sign);display:grid;place-items:center;font-size:18px;font-weight:600;z-index:50}
+.loadhint{font-size:12px;color:var(--fg-2);max-width:62ch}
+.loadhint code{font-family:var(--mono);background:var(--surface-2);padding:1px 4px;border-radius:3px}
+@media (max-width:860px){
+  .main,.main.collapsed{grid-template-columns:1fr}
+  .resizer{display:none}
+  aside.tree{border-bottom:1px solid var(--line);max-height:42vh}
+  .two{grid-template-columns:1fr}
+  .chartbox{height:280px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+<header class="top">
+  <div class="brand"><span class="plate">TAAS</span><h1>교통사고 분석 패널</h1></div>
+  <div class="libstat" id="libstat"></div>
+  <div class="spacer"></div>
+  <input type="file" id="pickDir" webkitdirectory directory multiple hidden>
+  <input type="file" id="pickFiles" accept=".json,.gz,.js" multiple hidden>
+  <button class="btn primary" id="btnOpen" type="button" title="taas_library 폴더(안에 index.json·panel 폴더가 있는 폴더)를 고릅니다. raw 폴더가 아닙니다.">라이브러리 폴더 열기</button>
+  <button class="btn" id="btnOpenFiles" type="button" title="폴더 선택이 안 될 때 index.json과 panel 폴더의 파일을 함께 선택">파일로 열기</button>
+</header>
+<div class="main">
+  <aside class="tree" id="side">
+    <div class="treehead"><div class="search"><input type="search" id="q" placeholder="장표 검색 (예: 추돌, 음주, 노인)" aria-label="장표 검색"></div>
+      <button class="iconbtn" id="btnSide" type="button" title="목록 숨기기" aria-label="장표 목록 숨기기" aria-expanded="true">«</button></div>
+    <div class="pickbar" id="pickbar"><span>체크한 통계 <b id="ckN">0</b>개</span><span class="sp"></span>
+      <button class="btn small primary" id="btnMulti" type="button" title="체크한 통계만 모아 추세 비교·상관행렬·산점도로 분석합니다" disabled>상관관계 분석</button>
+      <button class="btn small" id="btnStatGo" type="button" title="체크한 통계를 모아 통계 기법 탭(추세·그레인저·회귀·주성분·중단 시계열)으로" disabled>통계 기법</button>
+      <button class="btn small" id="btnCkClear" type="button" title="체크 모두 해제" disabled>해제</button></div>
+    <div class="list"><div class="listin" id="tree"></div></div>
+  </aside>
+  <div class="resizer" id="resizer" title="드래그해서 목록 너비 조절 · 더블클릭하면 기본 너비" role="separator" aria-orientation="vertical"></div>
+  <section class="work">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-explore" aria-selected="true" data-v="explore">탐색</button>
+      <button role="tab" id="tab-corr" aria-selected="false" data-v="corr">상관관계 분석 <span class="pill" id="corrN">0</span></button>
+      <button role="tab" id="tab-stat" aria-selected="false" data-v="stat">통계 기법 <span class="pill" id="resN">0</span></button>
+      <button role="tab" id="tab-tech" aria-selected="false" data-v="tech">차량기술 매핑</button>
+    </div>
+
+    <div id="v-explore">
+      <div class="title-row"><h2 id="pTitle">장표를 선택하세요</h2><span class="crumb" id="pCrumb"></span></div>
+      <div id="pNotes"></div>
+      <div class="controls" id="ctl">
+        <div class="field"><label for="selMeasure">수치항목</label><select id="selMeasure"></select></div>
+        <div class="field"><label>연도</label><div class="yr"><input type="number" id="y0" aria-label="시작 연도"><span>~</span><input type="number" id="y1" aria-label="끝 연도"></div></div>
+        <div class="field"><label for="selX">가로축</label><select id="selX"></select></div>
+        <div class="field"><label for="selS">계열(색)</label><select id="selS"></select></div>
+        <div class="field"><label for="selKind">차트</label><select id="selKind"><option value="auto">자동</option><option value="line">선</option><option value="bar">막대</option></select></div>
+        <div class="field"><label for="selNorm">값 변환</label><select id="selNorm"><option value="raw">원값</option><option value="share">계열 내 비중(%)</option><option value="index">첫 연도=100</option><option value="yoy">전년 대비(%)</option></select></div>
+        <div class="field"><label>&nbsp;</label><div class="applyrow"><button class="btn primary" id="btnRun" type="button" title="현재 조건으로 다시 계산해 차트와 표를 그립니다">분석 실행</button><label title="끄면 조건을 여러 개 바꾼 뒤 '분석 실행'으로 한 번에 적용"><input type="checkbox" id="autoRun" checked>자동 적용</label></div></div>
+      </div>
+      <div class="dimfilters" id="dims"></div>
+      <div class="card">
+        <div class="charthead"><h3 id="chartTitle">차트</h3><div class="ctools" data-for="main"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div>
+        <div class="legend" id="legend"></div>
+        <div class="chartbox" id="cbox"><canvas id="chart" aria-label="선택한 장표 차트" role="img"></canvas></div>
+        <div class="hint">클릭 = 기준선 M1 (가장 가까운 점) · Ctrl+클릭 = 비교선 M2 와 차이 계산 · 드래그 = 구간 확대 · Ctrl+휠 = 확대/축소 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기 · 범례 클릭 = 계열 숨기기</div>
+        <div class="mbar" id="mbar"></div>
+      </div>
+      <div class="card">
+        <h3>표</h3>
+        <div class="tablewrap" id="tbl"></div>
+        <div class="row-actions">
+          <button class="btn small" id="btnCopy" type="button">표 복사 (탭 구분)</button>
+          <button class="btn small" id="btnAddCorr" type="button">현재 계열을 상관분석에 추가</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="v-corr" hidden>
+      <div class="title-row"><h2>상관관계 분석</h2><span class="crumb">왼쪽 목록에서 통계를 체크하고 '상관관계 분석'을 누르면 그 통계만 모아 분석합니다 · 탐색 탭의 계열도 추가할 수 있습니다</span></div>
+      <div class="controls">
+        <div class="field"><label>연도 범위</label><div class="yr"><input type="number" id="cY0" value="2005" aria-label="시작 연도"><span>~</span><input type="number" id="cY1" value="2025" aria-label="끝 연도"></div></div>
+        <div class="field"><label for="cMethod">방법</label><select id="cMethod"><option value="pearson">피어슨 r</option><option value="spearman">스피어만 ρ</option></select></div>
+        <div class="field"><label for="cDiff">시계열 처리</label><select id="cDiff"><option value="0">원값</option><option value="1" selected>1차 차분 (추세 제거)</option><option value="pct">증감률(%)</option></select></div>
+        <div class="field"><label for="cLag">시차 (B를 n년 뒤로)</label><input type="number" id="cLag" value="0" min="-5" max="5"></div>
+        <div class="field"><label for="cAxis">맞춤 축</label><select id="cAxis"></select></div>
+        <div class="field"><label for="cRate">비율 환산 (인구 대비)</label><select id="cRate"><option value="">없음</option></select></div>
+      </div>
+      <div class="note" id="corrNote">연도별 시계열은 대부분 같은 감소 추세를 공유해 원값끼리는 상관이 과대하게 나옵니다. 기본값인 1차 차분은 해마다의 증감끼리 비교합니다. 2005~2025년은 최대 21개 점이므로 p값을 함께 보세요.</div>
+      <div class="card" id="setsCard" hidden><h3>선택한 통계 — 조건 바꾸기</h3><div class="sets" id="sets"></div>
+        <div class="hint">축마다 '합계/특정 값'으로 고정하거나 '▦ 계열로 나누기'를 고르면 그 축의 값별로 계열이 생깁니다. 인구 장표는 연령구분(전체·어린이·일반·노인)으로 나눠 둡니다.</div></div>
+      <div class="card" id="trCard" hidden><div class="charthead"><h3 id="trTitle">추세 비교</h3><div class="ctools" data-for="tr">
+          <select id="tNorm" aria-label="추세 비교 값 변환" class="btn small"><option value="index">첫 연도=100 (지수)</option><option value="z">표준화 (z점수)</option><option value="raw">원값</option></select>
+          <button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div>
+        <div class="legend" id="tlegend"></div>
+        <div class="chartbox" id="tbox"><canvas id="trend" aria-label="선택한 계열 추세 비교" role="img"></canvas></div>
+        <div class="hint">단위가 다른 통계를 한 그래프에서 비교하려고 기본값은 첫 연도=100 지수입니다. 범례 번호는 상관행렬 번호와 같습니다. 클릭 = 기준선 M1 · Ctrl+클릭 = M2 와 차이 · 드래그 = 확대 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기</div>
+        <div class="mbar" id="tbar"></div></div>
+      <div class="two">
+        <div class="card"><h3>계열</h3><div class="serieslist" id="slist"></div>
+          <div class="row-actions"><button class="btn small" id="btnClearCorr" type="button">모두 지우기</button><button class="btn small primary" id="btnToStat" type="button">이 계열로 통계 기법 분석 →</button></div></div>
+        <div class="card"><h3>상관행렬</h3><div style="overflow:auto" id="cmat"></div></div>
+      </div>
+      <div class="card"><div class="charthead"><h3 id="scTitle">산점도</h3><div class="ctools" data-for="sc"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준점·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div>
+        <div class="chartbox" id="sbox"><canvas id="scatter" aria-label="두 계열 산점도" role="img"></canvas></div><div class="stat" id="cstat"></div>
+        <div class="hint">클릭 = 기준점 M1 · Ctrl+클릭 = 비교점 M2 와 차이 · 드래그 = 영역 확대 · Ctrl+휠 = 확대/축소 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기</div>
+        <div class="mbar" id="sbar"></div></div>
+    </div>
+
+
+    <div id="v-stat" hidden>
+      <div class="title-row"><h2>통계 기법</h2><span class="crumb">상관관계 분석 탭에 모은 연도 계열에 대표 통계 기법 5가지를 적용합니다 · 결과는 같은 형식으로 담아 기법별로 합칠 수 있습니다</span></div>
+      <div class="controls">
+        <div class="field"><label>연도 범위</label><div class="yr"><input type="number" id="sY0" value="2005" aria-label="시작 연도"><span>~</span><input type="number" id="sY1" value="2025" aria-label="끝 연도"></div></div>
+        <div class="field"><label>분석 대상</label><div id="sPool" style="font-size:13px;padding-top:4px"></div></div>
+        <div class="field"><label>&nbsp;</label><div class="applyrow"><button class="btn small primary" id="sGather" type="button" title="왼쪽 목록에서 체크한 통계만 다시 모읍니다">체크한 통계로 모으기</button><button class="btn small" id="sGoCorr" type="button">계열 켜기·조건 바꾸기 (상관관계 분석 탭)</button></div></div>
+      </div>
+      <div class="subtabs" role="tablist" id="stabs">
+        <button type="button" data-m="trend">① 추세·변곡점</button>
+        <button type="button" data-m="lag">② 시차상관·그레인저 인과</button>
+        <button type="button" data-m="ols">③ 다중회귀</button>
+        <button type="button" data-m="pca">④ 주성분·군집</button>
+        <button type="button" data-m="its">⑤ 중단 시계열 (정책·기술 도입 효과)</button>
+        <button type="button" data-m="res">결과 모음</button>
+      </div>
+
+      <div class="mpane" data-m="trend">
+        <details class="about"><summary>이 기법은?</summary><div><b>Mann-Kendall 추세 검정</b>은 값의 크기 대신 해마다의 순서(증가/감소)만 보고 “꾸준히 오르거나 내리는가”를 판정합니다. 분포 가정이 없어 점이 적은 연도 시계열에 맞습니다. <b>Sen 기울기</b>는 모든 두 해 사이 기울기의 중앙값으로 이상값에 강한 연간 변화량입니다. <b>Pettitt 검정</b>은 평균이 한 번 바뀌는 연도(변곡점)를 찾습니다 — 제도·기술 도입 시기와 겹치는지 보세요. 판정 기준 p&lt;0.05.</div></details>
+        <div class="controls"><div class="field"><label for="tMode">처리</label><select id="tMode"><option value="raw">원값</option><option value="log">로그 (변화율 기준)</option></select></div>
+          <div class="field"><label for="tSeries">그래프 계열 (표의 행을 눌러도 됨)</label><select id="tSeries"></select></div></div>
+        <div class="card"><h3>계열별 추세·변곡점</h3><div class="mout" id="tOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="trend">결과 담기</button><button class="btn small" type="button" data-csv="trend">이 결과 CSV 저장</button></div></div>
+        <div class="card"><div class="charthead"><h3 id="hTrend">추세</h3><div class="ctools" data-for="mTrend"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox "><canvas id="cvTrend" role="img" aria-label="추세"></canvas></div><div class="hint">클릭 = 기준선 M1 · Ctrl+클릭 = M2 와 차이 · 드래그 = 확대 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기</div><div class="mbar" id="mbTrend"></div></div>
+      </div>
+
+      <div class="mpane" data-m="lag" hidden>
+        <details class="about"><summary>이 기법은?</summary><div><b>교차상관(CCF)</b>은 X를 앞뒤로 밀며 Y와의 상관을 계산해 “몇 년 앞서 움직이는가”를 봅니다(양수 시차 = X가 먼저). <b>그레인저 인과 검정</b>은 Y 자신의 과거만 쓴 모형에 X의 과거를 더했을 때 설명력이 유의하게 느는지 F 검정합니다. 예측상의 선행 관계일 뿐 실제 인과는 아니며, 추세가 있으면 결과가 왜곡되므로 기본값은 <b>1차 차분</b>입니다. 21년 자료에서는 시차 1~2년이 적당합니다.</div></details>
+        <div class="controls"><div class="field"><label for="gX">X (원인 후보)</label><select id="gX"></select></div><div class="field"><label for="gY">Y (결과 후보)</label><select id="gY"></select></div>
+          <div class="field"><label for="gMode">처리</label><select id="gMode"><option value="diff" selected>1차 차분 (권장)</option><option value="pct">증감률(%)</option><option value="log">로그</option><option value="raw">원값</option></select></div>
+          <div class="field"><label for="gLag">최대 시차 (년)</label><select id="gLag"><option>1</option><option selected>2</option><option>3</option></select></div>
+          <div class="field"><label>&nbsp;</label><label class="xck"><input type="checkbox" id="gAll">모든 쌍 그레인저 행렬도 계산</label></div></div>
+        <div class="card"><div class="charthead"><h3 id="hLag">교차상관</h3><div class="ctools" data-for="mLag"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox sm"><canvas id="cvLag" role="img" aria-label="교차상관"></canvas></div><div class="hint">막대가 점선(±2/√n) 밖이면 유의한 편입니다. 클릭 = 기준선 · Ctrl+클릭 = 차이 · 드래그 = 확대</div><div class="mbar" id="mbLag"></div></div>
+        <div class="card"><h3>그레인저 인과 검정</h3><div class="mout" id="gOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="lag">결과 담기</button><button class="btn small" type="button" data-csv="lag">이 결과 CSV 저장</button></div></div>
+      </div>
+
+      <div class="mpane" data-m="ols" hidden>
+        <details class="about"><summary>이 기법은?</summary><div><b>다중회귀(OLS)</b>는 종속 계열을 여러 설명 계열의 선형 결합으로 설명해, 다른 변수를 고정했을 때 각 변수의 효과(계수 b)와 유의성(p)을 봅니다. <b>표준화 β</b>로 단위가 다른 변수의 영향 크기를 비교하고, <b>VIF</b>(10 이상이면 다중공선성)와 <b>Durbin-Watson</b>(2에 가까울수록 잔차 자기상관 없음)으로 모형을 점검합니다. 연도 시계열은 공통 추세로 R²가 부풀기 쉬우니 <b>추세항</b>을 넣거나 1차 차분으로 보세요. 설명변수는 (연도 수 − 5)개 이하로.</div></details>
+        <div class="controls"><div class="field"><label for="oY">종속 계열 (Y)</label><select id="oY"></select></div>
+          <div class="field"><label for="oMode">처리</label><select id="oMode"><option value="raw">원값</option><option value="log">로그 (탄력성)</option><option value="diff">1차 차분</option><option value="z">표준화</option></select></div>
+          <div class="field"><label>&nbsp;</label><label class="xck"><input type="checkbox" id="oTrend">추세항(연도) 포함</label></div>
+          <div class="field"><label for="oDummy">더미: 이 연도 이후 = 1</label><input type="number" id="oDummy" placeholder="없음" style="width:90px"></div></div>
+        <div class="controls"><div class="field" style="width:100%"><label>설명 계열 (X) — 체크</label><div class="xcks" id="oX"></div></div></div>
+        <div class="card"><h3>회귀 결과</h3><div class="mout" id="oOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="ols">결과 담기</button><button class="btn small" type="button" data-csv="ols">이 결과 CSV 저장</button></div></div>
+        <div class="card"><div class="charthead"><h3 id="hOls">실측 vs 적합</h3><div class="ctools" data-for="mOls"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox "><canvas id="cvOls" role="img" aria-label="실측 vs 적합"></canvas></div><div class="hint">클릭 = 기준선 M1 · Ctrl+클릭 = M2 와 차이 · 드래그 = 확대 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기</div><div class="mbar" id="mbOls"></div></div>
+      </div>
+
+      <div class="mpane" data-m="pca" hidden>
+        <details class="about"><summary>이 기법은?</summary><div><b>주성분 분석(PCA)</b>은 여러 계열을 표준화한 뒤 함께 움직이는 공통 흐름(주성분)으로 요약합니다. PC1의 설명력이 크면 대부분 계열이 같은 추세를 공유한다는 뜻이고, <b>적재값</b>은 각 계열이 그 흐름에 얼마나 실리는지(−1~+1)입니다. <b>계층적 군집</b>은 1−상관을 거리로 비슷하게 움직이는 계열끼리 묶습니다(평균 연결). 공통 추세를 걷어내려면 1차 차분을 고르세요. 공통 연도가 계열 수보다 많아야 안정적입니다.</div></details>
+        <div class="controls"><div class="field"><label for="pMode">처리 (항상 표준화)</label><select id="pMode"><option value="raw">원값</option><option value="log">로그</option><option value="diff">1차 차분 (추세 제거)</option></select></div>
+          <div class="field"><label for="pK">군집 수</label><select id="pK"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div></div>
+        <div class="card"><h3>주성분 적재값·군집</h3><div class="mout" id="pOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="pca">결과 담기</button><button class="btn small" type="button" data-csv="pca">이 결과 CSV 저장</button></div></div>
+        <div class="two"><div class="card"><div class="charthead"><h3 id="hPcaS">주성분 설명력</h3><div class="ctools" data-for="mPcaS"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox sm"><canvas id="cvPcaS" role="img" aria-label="주성분 설명력"></canvas></div><div class="hint">막대 = 각 주성분 설명력, 선 = 누적</div><div class="mbar" id="mbPcaS"></div></div><div class="card"><div class="charthead"><h3 id="hPcaL">적재값 지도 (PC1 × PC2)</h3><div class="ctools" data-for="mPcaL"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox sm"><canvas id="cvPcaL" role="img" aria-label="적재값 지도 (PC1 × PC2)"></canvas></div><div class="hint">가까이 모인 계열은 같은 흐름을 공유합니다. 색 = 군집. 클릭 = 기준점 · Ctrl+클릭 = 차이 · 드래그 = 영역 확대</div><div class="mbar" id="mbPcaL"></div></div></div>
+      </div>
+
+      <div class="mpane" data-m="its" hidden>
+        <details class="about"><summary>이 기법은?</summary><div><b>중단 시계열 분석(분절 회귀)</b>은 정책·기술 도입 연도 T를 기준으로 y = b0 + b1·t + b2·D + b3·(t−T)·D 를 적합해, 도입 직후의 <b>수준 변화(b2)</b>와 그 뒤 <b>기울기 변화(b3)</b>를 추정합니다. 점선은 도입이 없었다면 이어졌을 추세(반사실)입니다. 같은 시기의 다른 요인을 배제하지 못하므로, 대상 계열(예: 대형차 추돌)과 비교 계열(예: 승용차 추돌)을 함께 넣어 차이를 보세요. 연 단위 21개 점에서는 b2·b3의 p값이 크게 나오기 쉽습니다.</div></details>
+        <div class="controls"><div class="field"><label for="iYear">도입(개입) 연도 T</label><input type="number" id="iYear" value="2017" style="width:90px"></div>
+          <div class="field"><label>빠른 선택</label><span class="presets"><button class="btn small" type="button" data-y="2017" title="길이 11m 초과 승합·총중량 20t 이상 화물/특수 신차 비상자동제동장치 의무 (2017.1)">2017 대형차 AEBS</button><button class="btn small" type="button" data-y="2020" title="사업용 대형 버스·화물차 차로이탈경고장치 기존차 장착 기한 2019년 말">2020 대형차 LDWS 완료</button><button class="btn small" type="button" data-y="2020" title="어린이보호구역 처벌 강화·시설 확충 (2020.3 시행)">2020 민식이법</button><button class="btn small" type="button" data-y="2021" title="도시부 제한속도 50km/h·이면도로 30km/h 전국 시행 (2021.4)">2021 안전속도 5030</button></span></div>
+          <div class="field"><label for="iMode">처리</label><select id="iMode"><option value="raw">원값</option><option value="log">로그 (변화율)</option></select></div>
+          <div class="field"><label for="iSeries">그래프 계열 (표의 행을 눌러도 됨)</label><select id="iSeries"></select></div></div>
+        <div class="card"><h3>계열별 도입 효과</h3><div class="mout" id="iOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="its">결과 담기</button><button class="btn small" type="button" data-csv="its">이 결과 CSV 저장</button></div></div>
+        <div class="card"><div class="charthead"><h3 id="hIts">중단 시계열</h3><div class="ctools" data-for="mIts"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox "><canvas id="cvIts" role="img" aria-label="중단 시계열"></canvas></div><div class="hint">클릭 = 기준선 M1 · Ctrl+클릭 = M2 와 차이 · 드래그 = 확대 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기</div><div class="mbar" id="mbIts"></div></div>
+      </div>
+
+      <div class="mpane" data-m="res" hidden>
+        <div class="note">각 기법 탭에서 "결과 담기"를 누른 결과가 모두 같은 열 형식(run_id · 기법 · 실행시각 · 기간 · 처리 · 대상 · 상대 · 항목 · 통계량 · 값 · p값 · n · 비고)으로 쌓입니다. 이 브라우저에 기억되며, CSV/JSON으로 저장해 엑셀·파이썬에서 기법별로 합칠 수 있습니다.</div>
+        <div class="controls"><div class="field"><label for="rFilter">기법</label><select id="rFilter"><option value="">전체</option><option>추세·변곡점</option><option>시차상관·그레인저</option><option>다중회귀</option><option>주성분·군집</option><option>중단 시계열</option></select></div>
+          <div class="field"><label>&nbsp;</label><div class="applyrow"><button class="btn small primary" id="rCsv" type="button">CSV 저장</button><button class="btn small" id="rJson" type="button">JSON 저장</button><button class="btn small" id="rClear" type="button">모두 지우기</button></div></div></div>
+        <div class="stat" id="rSum"></div>
+        <div class="card"><div class="mout tablewrap" id="rOut"></div></div>
+      </div>
+    </div>
+
+    <div id="v-tech" hidden>
+      <div class="title-row"><h2>차량기술 매핑</h2><span class="crumb">기술이 겨냥하는 사고 유형을 TAAS 장표의 해당 구간과 연결</span></div>
+      <div class="note">매핑은 기술의 작동 영역과 사고 분류를 대응시킨 가설입니다. TAAS 경찰DB에는 차량의 장착 여부가 없으므로 효과 추정이 아니라, 대상 사고 규모와 추이를 보는 출발점으로 쓰세요. 각 카드의 "탐색"은 장표를 열고 조건을 맞추며, "추가"는 연도 시계열을 상관분석 목록에 넣습니다.</div>
+      <div class="techgrid" id="techgrid"></div>
+    </div>
+  </section>
+</div>
+</div>
+
+<span class="toast" id="toast" role="status" aria-live="polite"></span>
+<script>
+/*__SAMPLE__*/
+</script>
+<script src="index.js" onerror="void 0"></script>
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2});
+const TOTALS=new Set(['합계','계','전국','전체','소계']);
+const S={index:null, files:new Map(), cache:new Map(), mode:'sample', pid:null, P:null, st:null, corr:[], chart:null, sc:null, sel:[0,1], subClosed:new Set(), checked:new Set(), sets:[], setSeq:0, rateDen:'', tr:null};
+try{ S.checked=new Set(JSON.parse(localStorage.getItem('taas.checked')||'[]').map(Number)) }catch(e){}
+try{ S.subClosed=new Set(JSON.parse(localStorage.getItem('taas.subClosed')||'[]')) }catch(e){}
+
+/* ---------- 라이브러리 로딩 ---------- */
+async function gunzipText(file){
+  if(file.name.endsWith('.gz')){
+    const ds=new DecompressionStream('gzip');
+    return await new Response(file.stream().pipeThrough(ds)).text();
+  }
+  return await file.text();
+}
+async function openFiles(list){
+  const files=[...list]; if(!files.length) return;
+  const idxF=files.find(f=>/(^|\/)index\.json$/.test(f.webkitRelativePath||f.name))||files.find(f=>f.name==='index.json');
+  if(!idxF){toast('index.json을 찾지 못했습니다. 라이브러리 폴더(taas_library) 전체를 선택하세요.',true);return}
+  try{
+    const idx=JSON.parse(await idxF.text());
+    S.files=new Map(); for(const f of files){const m=f.name.match(/^p(\d+)\.json(\.gz)?$/); if(m) S.files.set(+m[1],f)}
+    S.index=idx; S.cache=new Map(); S.mode='live'; S.corr=[]; S.sets=[];
+    renderStat(); renderTree(); renderTech(); renderCorr();
+    const first=idx.patterns.find(p=>p.pid===7019&&S.files.has(7019))||idx.patterns.find(p=>S.files.has(p.pid));
+    if(first) selectPattern(first.pid);
+    toast(`장표 ${S.files.size}개를 불러왔습니다.`);
+  }catch(e){toast('index.json을 읽지 못했습니다: '+e.message,true)}
+}
+const _wait=new Map(); // 장표별 대기열 — 빠르게 여러 장표를 눌러도 응답이 섞이지 않게
+window.TAAS_LOAD=o=>{const f=o&&_wait.get(o.pid); if(f){_wait.delete(o.pid); f(o)}};
+function loadScript(pid){ // 라이브러리 폴더에서 panel.html 을 직접 연 경우
+  return new Promise(res=>{ _wait.set(pid,res);
+    const s=document.createElement('script');s.src=`panel_js/p${pid}.js`;s.onerror=()=>{_wait.delete(pid);res(null)};s.onload=()=>{s.remove(); if(_wait.has(pid)){_wait.delete(pid);res(null)}};document.head.appendChild(s)});
+}
+async function getPattern(pid){
+  if(S.cache.has(pid)) return S.cache.get(pid);
+  let obj=null;
+  if(S.mode==='local'){obj=await loadScript(pid)}
+  else if(S.mode==='sample'){obj=(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid])||null}
+  else{const f=S.files.get(pid); if(f) obj=JSON.parse(await gunzipText(f))}
+  if(obj){obj.n=obj.v.length; S.cache.set(pid,obj)}
+  return obj;
+}
+function meta(pid){return S.index.patterns.find(p=>p.pid===pid)}
+function hasData(pid){
+  if(S.mode==='sample') return !!(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid]);
+  if(S.mode==='local'){const p=meta(pid);return !!(p&&p.n_facts>0)}
+  return S.files.has(pid)}
+
+/* ---------- 헤더/트리 ---------- */
+function renderStat(){
+  const I=S.index, el=$('#libstat');
+  if(!I){el.innerHTML='';return}
+  const n=I.patterns.length, nd=I.patterns.filter(p=>hasData(p.pid)).length;
+  const yr=I.year_min===I.year_max?`${I.year_min}`:`${I.year_min}~${I.year_max}`;
+  const tip=`장표 ${nd}/${n} · 셀 ${fmt.format(I.n_facts)}${I.built_at?' · 만든 날 '+I.built_at.slice(0,10):''}`;
+  el.innerHTML=S.mode==='sample'
+    ?`<span class="pill sample" title="${esc(tip)}">예시 데이터 <b>${yr}</b></span><span>라이브러리 폴더를 열면 전체 장표</span>`
+    :`<span class="pill live" title="${esc(tip)}">적용 라이브러리 <b>${yr}</b></span>`;
+}
+function renderTree(){
+  const q=$('#q').value.trim(), box=$('#tree'); box.innerHTML='';
+  if(!S.index){box.innerHTML='<div class="sub">라이브러리를 열면 장표 목록이 나옵니다.</div>';return}
+  const groups=new Map();
+  for(const p of S.index.patterns){
+    if(q && !(p.name+p.path).includes(q)) continue;
+    const parts=p.path.split(' > '); const g=parts[0]+' · '+(parts[1]||''); const sub=parts.length>3?parts[2]:'';
+    if(!groups.has(g)) groups.set(g,new Map()); const gm=groups.get(g);
+    if(!gm.has(sub)) gm.set(sub,[]); gm.get(sub).push(p);
+  }
+  for(const [g,subs] of groups){
+    const d=document.createElement('details'); const cnt=[...subs.values()].reduce((a,b)=>a+b.length,0);
+    d.open=!!q || [...subs.values()].some(a=>a.some(p=>p.pid===S.pid));
+    const sm=document.createElement('summary'); sm.innerHTML=`<span>${esc(g)}</span><span class="n">${cnt}</span>`; d.appendChild(sm);
+    for(const [sub,arr] of subs){
+      let host=d;
+      if(sub){ // 소분류: 제목·장표 수를 보여주고 눌러서 접기/펼치기 (접은 상태는 기억)
+        const key=g+'|'+sub, sd=document.createElement('details'); sd.className='subgrp';
+        sd.open=!!q || !S.subClosed.has(key) || arr.some(p=>p.pid===S.pid);
+        const ss=document.createElement('summary'); ss.innerHTML=`<span class="nm">${esc(sub)}</span><span class="n">${arr.length}</span>`; ss.title=sub+' — 눌러서 접기/펼치기';
+        sd.appendChild(ss); sd.addEventListener('toggle',()=>{ if(q) return; sd.open?S.subClosed.delete(key):S.subClosed.add(key); try{localStorage.setItem('taas.subClosed',JSON.stringify([...S.subClosed]))}catch(e){} });
+        d.appendChild(sd); host=sd }
+      for(const p of arr){const ok=hasData(p.pid), row=document.createElement('div'); row.className='irow'+(S.checked.has(p.pid)?' ck':'');
+        const ck=document.createElement('input'); ck.type='checkbox'; ck.checked=S.checked.has(p.pid); ck.disabled=!ok; ck.title='체크해서 상관관계 분석에 포함'; ck.setAttribute('aria-label',p.name+' 상관관계 분석에 포함');
+        ck.onchange=()=>{ ck.checked?S.checked.add(p.pid):S.checked.delete(p.pid); row.classList.toggle('ck',ck.checked); saveChecked() };
+        const b=document.createElement('button');b.type='button';b.className='item'+(p.pid===S.pid?' on':'')+(ok?'':' nodata');
+        b.textContent=p.name; b.title=p.path+(ok?'':' (데이터 없음)'); b.onclick=()=>selectPattern(p.pid); row.append(ck,b); host.appendChild(row)}
+    }
+    box.appendChild(d);
+  }
+  if(!groups.size) box.innerHTML='<div class="sub">일치하는 장표가 없습니다.</div>';
+  renderPickbar();
+}
+function saveChecked(){ try{localStorage.setItem('taas.checked',JSON.stringify([...S.checked]))}catch(e){} renderPickbar() }
+function renderPickbar(){ const n=S.index?[...S.checked].filter(p=>meta(p)&&hasData(p)).length:0; $('#ckN').textContent=n; $('#btnMulti').disabled=!n; $('#btnStatGo').disabled=!n; $('#btnCkClear').disabled=!S.checked.size }
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- 탐색 ---------- */
+// 계층형 축(예: 사고유형 대분류 > 중분류 > 사고유형): 상위 차원을 '합계'로 고정하면 하위 값이 비므로 '모두'로 전환
+function fixHier(P,st){
+  const nd=P.dim_names.length;
+  const test=()=>{for(let r=0;r<P.n;r++){if(P.m[r]!==st.measure)continue;let ok=true;for(let i=0;i<nd;i++){if(st.all.has(i)&&i!==st.x&&i!==st.s)continue;if(!st.pick[i].has(P.d[i][r])){ok=false;break}}if(ok&&P.v[r]!==null)return true}return false};
+  if(test()) return;
+  for(let i=0;i<nd;i++){ if(i===st.s||i===st.x||isMetric(P,i)) continue; const v=P.dicts[i][[...st.pick[i]][0]]; if(!TOTALS.has(v)) continue; st.all.add(i); if(test()) return; }
+}
+// 값마다 단위가 다른 '지표 축'(예: OECD 세부1 = 인구수(천명)·사고[건]·순위…)은 더하면 안 되므로 합산(모두) 대상에서 뺌
+function isMetric(P,i){ if(!P._met) P._met={}; if(i in P._met) return P._met[i];
+  const d=P.dicts[i].filter(v=>v&&!TOTALS.has(v)); const k=d.filter(v=>/[\(\[][^\)\]]+[\)\]]$|순위|당 /.test(v)).length;
+  return P._met[i]=(/^세부|지표/.test(P.dim_names[i])&&d.length>1)||(d.length>1&&k/d.length>=0.6) }
+function defaultState(P,m){
+  const nd=P.dim_names.length;
+  // 가로축: 연도가 2개 이상이면 연도, 아니면 비합계 값이 가장 많은 차원
+  let x='year';
+  if(P.years.length<2 && nd){let best=0,bi=0;P.dicts.forEach((d,i)=>{const k=d.filter(v=>!TOTALS.has(v)).length;if(k>best){best=k;bi=i}});x=bi}
+  // 계열: 연도가 가로축이면 첫 번째 비합계 차원
+  let s=null;
+  if(x==='year'){for(let i=0;i<nd;i++){if(isMetric(P,i))continue;const k=P.dicts[i].filter(v=>!TOTALS.has(v)).length;if(k>1&&k<=12){s=i;break}}
+    if(s===null){let best=1e9;for(let i=0;i<nd;i++){if(isMetric(P,i))continue;const k=P.dicts[i].filter(v=>!TOTALS.has(v)).length;if(k>12&&k<=80&&k<best){best=k;s=i}}}}
+  const pick=P.dicts.map((d,i)=>{
+    if(i===x) return new Set(d.map((v,j)=>j).filter(j=>!TOTALS.has(d[j])));
+    if(i===s){const all=d.map((v,j)=>j).filter(j=>!TOTALS.has(d[j])); if(all.length<=12) return new Set(all); const ko=all.filter(j=>d[j]==='대한민국'); return new Set([...ko,...all.filter(j=>!ko.includes(j))].slice(0,8))}
+    const t=d.findIndex(v=>TOTALS.has(v)); if(t>=0) return new Set([t]);
+    if(isMetric(P,i)){const pref=d.findIndex(v=>/사고\[|사고건수|사망\[|사망자수/.test(v)); return new Set([pref>=0?pref:0])}
+    return new Set([0]);
+  });
+  let mi=P.measures.findIndex(v=>/사고|건/.test(v)); if(mi<0) mi=P.measures.findIndex(v=>/^인구\[/.test(v)); mi=Math.max(0,mi);
+  const st={measure:mi, y0:P.years[0], y1:P.years[P.years.length-1], x, s, pick, all:new Set(), kind:'auto', norm:'raw'};
+  // 합계 항목이 없는 차원은 첫 값이 아니라 전체 합산을 기본으로
+  P.dicts.forEach((d,i)=>{ if(i!==x&&i!==s&&!d.some(v=>TOTALS.has(v))&&!isMetric(P,i)) st.all.add(i) });
+  fixHier(P,st); return st;
+}
+async function selectPattern(pid,preset){
+  S.pid=pid; renderTree(); CTL.main.reset(true); CTL.main.hidden.clear();
+  const m=meta(pid); $('#pTitle').textContent=m?m.name:('장표 '+pid); $('#pCrumb').textContent=m?m.path.split(' > ').slice(0,-1).join(' › '):'';
+  const cv=[]; if(m){ if(m.notes) cv.push(esc(m.notes));
+    if(m.empty_chunks) cv.push('TAAS에 데이터가 없는 구간: '+esc(m.empty_chunks));
+    if(m.partial_chunks) cv.push('서버 오류로 일부 수치항목(중상·경상·부상신고 등)이 빠진 구간: '+esc(m.partial_chunks));
+    if(m.dim_changed) cv.push('연도에 따라 축 구성이 달라 과거 연도에 없는 축은 비어 있습니다.') }
+  $('#pNotes').innerHTML=cv.map(t=>`<div class="note">${t}</div>`).join('');
+  const tok=S.tok=(S.tok||0)+1; const P=await getPattern(pid); if(tok!==S.tok) return; S.P=P;
+  if(!P){$('#dims').innerHTML='';$('#tbl').innerHTML='<div class="empty">이 장표는 라이브러리에 데이터가 없습니다.</div>';drawChart(null);return}
+  S.st=defaultState(P,m); if(preset) applyPreset(P,preset);
+  buildControls(); update();
+}
+function findDim(P,name){const e=P.dim_names.indexOf(name);if(e>=0)return e;return P.dim_names.findIndex(n=>n.includes(name))}
+function applyPreset(P,pr){
+  const st=S.st;
+  // 가로축을 먼저 정하고(이전 축은 합계로 되돌림), 그 다음 조건을 적용
+  if(pr.x!==undefined && typeof st.x==='number' && pr.x!==P.dim_names[st.x]){ const o=st.x, t=P.dicts[o].findIndex(v=>TOTALS.has(v)); if(t>=0) st.pick[o]=new Set([t]); else st.all.add(o); if(pr.x==='year') st.x='year' }
+  if(pr.measure){const i=P.measures.findIndex(v=>v.includes(pr.measure)); if(i>=0) st.measure=i}
+  for(const [dimName,want] of Object.entries(pr.filter||{})){
+    const di=findDim(P,dimName); if(di<0) continue;
+    const idx=P.dicts[di].map((v,j)=>j).filter(j=>want.some(w=>P.dicts[di][j].includes(w)));
+    if(idx.length){ if(st.s===di||st.x===di){st.pick[di]=new Set(idx)} else {st.pick[di]=new Set([idx[0]]);st.all.delete(di)} }
+  }
+  if('series' in pr && pr.series===null && st.s!==null){ if(typeof st.s==='number'){const t=P.dicts[st.s].findIndex(v=>TOTALS.has(v)); if(t>=0) st.pick[st.s]=new Set([t]); else st.all.add(st.s)} st.s=null }
+  if(pr.series){const di=findDim(P,pr.series); if(di>=0){ if(st.s!==null&&st.s!==di){const t=P.dicts[st.s].findIndex(v=>TOTALS.has(v)); st.pick[st.s]=new Set([t>=0?t:0])} st.s=di;
+    const w=pr.filter&&pr.filter[pr.series]; st.pick[di]=new Set(P.dicts[di].map((v,j)=>j).filter(j=>w?w.some(x=>P.dicts[di][j].includes(x)):!TOTALS.has(P.dicts[di][j])).slice(0,8)) } }
+  if(pr.x!==undefined){ if(pr.x==='year') st.x='year'; else {const di=findDim(P,pr.x); if(di>=0){st.x=di; st.pick[di]=new Set(P.dicts[di].map((v,j)=>j).filter(j=>!TOTALS.has(P.dicts[di][j])))}} }
+}
+function buildControls(){ if(S.P&&S.st&&!S.st._fx){S.st._fx=1;fixHier(S.P,S.st)}
+  const P=S.P, st=S.st;
+  $('#selMeasure').innerHTML=P.measures.map((m,i)=>`<option value="${i}">${esc(m)}</option>`).join('');
+  $('#selMeasure').value=st.measure;
+  $('#y0').min=$('#y1').min=P.years[0]; $('#y0').max=$('#y1').max=P.years.at(-1); $('#y0').value=st.y0; $('#y1').value=st.y1;
+  const opts=[['year','연도'],...P.dim_names.map((n,i)=>[i,n])];
+  $('#selX').innerHTML=opts.map(([v,n])=>`<option value="${v}">${esc(n)}</option>`).join('');
+  $('#selX').value=st.x;
+  $('#selS').innerHTML='<option value="">없음</option>'+P.dim_names.map((n,i)=>`<option value="${i}">${esc(n)}</option>`).join('')+(st.x!=='year'?'<option value="year">연도</option>':'');
+  $('#selS').value=st.s===null?'':st.s;
+  $('#selKind').value=st.kind; $('#selNorm').value=st.norm;
+  buildDims();
+}
+function buildDims(){
+  const P=S.P, st=S.st, box=$('#dims'); box.innerHTML='';
+  P.dim_names.forEach((name,i)=>{
+    const axis=(st.x===i||st.s===i); const d=P.dicts[i];
+    const el=document.createElement('div'); el.className='dimbox';
+    if(axis){
+      el.innerHTML=`<div class="head"><span class="lbl">${st.x===i?'가로축':'계열'} · <b>${esc(name)}</b></span><span><button class="btn small" data-a="all">전체</button> <button class="btn small" data-a="none">해제</button></span></div><div class="chips"></div>`;
+      const chips=el.querySelector('.chips');
+      d.forEach((v,j)=>{const c=document.createElement('button');c.type='button';c.className='chip'+(TOTALS.has(v)?' total':'');c.textContent=v||'(빈값)';c.setAttribute('aria-pressed',st.pick[i].has(j));
+        c.onclick=()=>{st.pick[i].has(j)?st.pick[i].delete(j):st.pick[i].add(j);c.setAttribute('aria-pressed',st.pick[i].has(j));changed()};chips.appendChild(c)});
+      el.querySelector('[data-a=all]').onclick=()=>{st.pick[i]=new Set(d.map((v,j)=>j).filter(j=>!TOTALS.has(d[j])));buildDims();changed()};
+      el.querySelector('[data-a=none]').onclick=()=>{st.pick[i]=new Set();buildDims();changed()};
+    }else{
+      const id='dsel'+i, met=isMetric(P,i); if(met) st.all.delete(i);
+      el.innerHTML=`<div class="field"><label for="${id}">${esc(name)}${met?' <span title="값마다 단위가 달라 합산하지 않는 지표 축">(지표)</span>':''}</label><select id="${id}">${met?'':'<option value="-1">(모두 · 가로축에 표시)</option>'}${d.map((v,j)=>`<option value="${j}">${esc(v||'(빈값)')}</option>`).join('')}</select></div>`;
+      const sel=el.querySelector('select'); sel.value=st.all.has(i)?-1:([...st.pick[i]][0]??0);
+      sel.onchange=()=>{const v=+sel.value; if(v<0){st.all.add(i)}else{st.all.delete(i);st.pick[i]=new Set([v])} changed()};
+    }
+    box.appendChild(el);
+  });
+}
+function axisLabel(P,ax,k){return ax==='year'?String(P.years[k]):(P.dicts[ax][k]||'(빈값)')}
+function compute(P=S.P, st=S.st){
+  const nd=P.dim_names.length; const allIdx=[...st.all].filter(i=>i!==st.x&&i!==st.s).sort((a,b)=>a-b);
+  const yOK=P.years.map(y=>y>=st.y0&&y<=st.y1);
+  const cell=new Map(), depth=new Map(); // xk|sk -> 합계, 사용한 계층 깊이
+  const xs=new Set(), ss=new Set();
+  // '합계'로 고정한 축: 합계 행이 있으면 그 값, 없으면(계층형 표의 하위 항목만 있는 경우) 가장 얕은 단계의 하위 행들을 더함
+  const T=new Set(); for(let i=0;i<nd;i++){ if(i===st.x||i===st.s||(st.all.has(i))) continue; const pk=[...st.pick[i]]; if(pk.length===1&&TOTALS.has(P.dicts[i][pk[0]])) T.add(i) }
+  for(let r=0;r<P.n;r++){
+    if(P.m[r]!==st.measure) continue;
+    const yi=P.y[r]; if(yi>=0&&!yOK[yi]) continue;
+    let ok=true, dep=0; for(let i=0;i<nd;i++){ if(st.all.has(i)&&i!==st.x&&i!==st.s) continue; const c=P.d[i][r];
+      if(T.has(i)){ if(P.dicts[i][c]!==''&&!TOTALS.has(P.dicts[i][c])) dep++; continue }
+      if(P.dicts[i][c]==='' && i!==st.x && i!==st.s) continue; if(!st.pick[i].has(c)){ok=false;break} } if(!ok) continue;
+    const v=P.v[r]; if(v===null) continue;
+    const pre=allIdx.map(i=>P.d[i][r]).join(',');
+    const xk0=st.x==='year'?yi:P.d[st.x][r]; const xk=pre&&st.x!=='year'?pre+','+xk0:xk0; const sk=st.s===null?-1:(st.s==='year'?yi:P.d[st.s][r]);
+    const key=xk+'|'+sk, d0=depth.get(key);
+    if(d0===undefined||dep<d0){ depth.set(key,dep); cell.set(key,v) } else if(dep===d0) cell.set(key,cell.get(key)+v);
+    xs.add(xk); ss.add(sk);
+  }
+  const ord=(ax,set)=>[...set].sort((a,b)=>{if(typeof a==='string'||typeof b==='string'){const A=String(a).split(',').map(Number),B=String(b).split(',').map(Number);for(let i=0;i<Math.max(A.length,B.length);i++){if((A[i]||0)!==(B[i]||0))return (A[i]||0)-(B[i]||0)}return 0}return a-b});
+  const X=ord(st.x,xs), Sx=ord(st.s,ss);
+  const series=Sx.map(sk=>({key:sk,label:sk===-1?(P.measures[st.measure]):axisLabel(P,st.s,sk),vals:X.map(xk=>cell.has(xk+'|'+sk)?cell.get(xk+'|'+sk):null)}));
+  // 변환
+  if(st.norm==='share'){const tot=X.map((_,j)=>series.reduce((a,s)=>a+(s.vals[j]||0),0));series.forEach(s=>s.vals=s.vals.map((v,j)=>v===null||!tot[j]?null:v/tot[j]*100))}
+  if(st.norm==='index'){series.forEach(s=>{const b=s.vals.find(v=>v);s.vals=s.vals.map(v=>v===null||!b?null:v/b*100)})}
+  if(st.norm==='yoy'){series.forEach(s=>{s.vals=s.vals.map((v,j)=>j===0||v===null||!s.vals[j-1]?null:(v/s.vals[j-1]-1)*100)})}
+  const xl=k=>{ if(st.x==='year'||!allIdx.length) return axisLabel(P,st.x,k);
+    const c=String(k).split(',').map(Number); const parts=allIdx.map((i,j)=>P.dicts[i][c[j]]).concat([P.dicts[st.x][c.at(-1)]]);
+    const keep=parts.filter((v,j)=>j===parts.length-1||!TOTALS.has(v)).filter((v,j,a)=>j===0||v!==a[j-1]); return keep.join(' › ')};
+  return {X, xlabels:X.map(xl), series};
+}
+const PAL=()=>['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'].map(css);
+function colorFor(sk,ord){ // 색은 사전 순서(항목 고유)로 고정. 8개를 넘으면 색상환에서 겹치지 않게 추가
+  const p=PAL(); const o=sk<0?0:ord; if(o<8) return p[o];
+  const h=(o*137.508)%360, dark=matchMedia('(prefers-color-scheme: dark)').matches; return `hsl(${h.toFixed(0)} 62% ${dark?62:44}%)`;
+}
+function update(){
+  const P=S.P, st=S.st; if(!P) return;
+  st.measure=+$('#selMeasure').value; st.y0=+$('#y0').value||P.years[0]; st.y1=+$('#y1').value||P.years.at(-1);
+  if(st.y0>st.y1){[st.y0,st.y1]=[st.y1,st.y0];$('#y0').value=st.y0;$('#y1').value=st.y1}
+  setPending(false);
+  const R=compute(); S.R=R;
+  const kind=st.kind==='auto'?(st.x==='year'?'line':'bar'):st.kind;
+  const unit=P.measures[st.measure]; const nrm={raw:'',share:' · 비중(%)',index:' · 지수',yoy:' · 전년비(%)'}[st.norm];
+  $('#chartTitle').textContent=`${unit}${nrm} — ${st.x==='year'?'연도별':P.dim_names[st.x]+'별'}${st.s!==null?' × '+(st.s==='year'?'연도':P.dim_names[st.s]):''}`;
+  drawChart(R,kind); drawTable(R);
+}
+const MAXS=30;
+function drawChart(R,kind){
+  const ctx=$('#chart'); if(S.chart){S.chart.destroy();S.chart=null}
+  const lg=$('#legend'); lg.innerHTML='';
+  if(!R||!R.series.length){CTL.main.after(null);return}
+  const shown=R.series.slice(0,MAXS); const fg=css('--fg-2'), grid=css('--line'), surf=css('--surface');
+  const keyOrder=new Map(); // 색 고정: 계열 사전 인덱스 순서
+  [...R.series].map(s=>s.key).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).forEach((k,i)=>keyOrder.set(k,i));
+  const hid=CTL.main.hidden;
+  const ds=shown.map(s=>{const c=colorFor(s.key,keyOrder.get(s.key));return {label:s.label,data:s.vals,hidden:hid.has(s.label),borderColor:c,backgroundColor:c,borderWidth:2,pointRadius:kind==='line'?3:0,pointHoverRadius:5,pointBackgroundColor:c,pointBorderColor:surf,pointBorderWidth:2,spanGaps:true,borderRadius:kind==='bar'?4:0,borderSkipped:'start',maxBarThickness:28,tension:0}});
+  if(shown.length>1){ lg.innerHTML=shown.map((d,k)=>`<span data-k="${k}" class="${d.hidden?'off':''}" title="클릭해서 숨기기/보이기"><i style="background:${d.borderColor}"></i>${esc(d.label)}</span>`).join('')+(R.series.length>MAXS?`<span>외 ${R.series.length-MAXS}개 계열은 표에만 표시</span>`:'');
+    lg.querySelectorAll('[data-k]').forEach(el=>el.onclick=()=>{const k=+el.dataset.k,c=S.chart;if(!c)return;const v=!c.isDatasetVisible(k);c.setDatasetVisibility(k,v);
+      const nm=c.data.datasets[k].label; v?hid.delete(nm):hid.add(nm); el.classList.toggle('off',!v); CTL.main.fitY(c); c.update('none'); CTL.main.renderBar()}) }
+  const view=CTL.main.prep(R.xlabels);
+  S.chart=new Chart(ctx,{type:kind,data:{labels:R.xlabels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y===null?'–':fmt.format(c.parsed.y)}`}}},
+    scales:{x:{min:view?view[0]:undefined,max:view?view[1]:undefined,ticks:{color:fg,maxRotation:60,autoSkip:true},grid:{display:false},border:{color:css('--line-strong')}},y:{beginAtZero:S.st.norm!=='yoy',ticks:{color:fg,callback:v=>fmt.format(v)},grid:{color:grid},border:{display:false}}}}});
+  CTL.main.after(S.chart);
+}
+function drawTable(R){
+  const P=S.P, st=S.st, el=$('#tbl');
+  if(!R.series.length){el.innerHTML='<div class="empty">조건에 맞는 값이 없습니다. 위 필터를 조정해 보세요.</div>';return}
+  const head=`<tr><th>${esc(st.x==='year'?'연도':P.dim_names[st.x])}</th>${R.series.map(s=>`<th>${esc(s.label)}</th>`).join('')}</tr>`;
+  const body=R.X.map((x,j)=>`<tr><th>${esc(R.xlabels[j])}</th>${R.series.map(s=>`<td>${s.vals[j]===null?'–':fmt.format(s.vals[j])}</td>`).join('')}</tr>`).join('');
+  el.innerHTML=`<table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+function tableTSV(){
+  const R=S.R,P=S.P,st=S.st; if(!R) return '';
+  const lines=[[st.x==='year'?'연도':P.dim_names[st.x],...R.series.map(s=>s.label)].join('\t')];
+  R.X.forEach((x,j)=>lines.push([R.xlabels[j],...R.series.map(s=>s.vals[j]??'')].join('\t'))); return lines.join('\n');
+}
+function toast(msg,bad){const t=$('#toast');t.textContent=msg;t.style.color=bad?css('--crit'):css('--good');clearTimeout(toast._t);toast._t=setTimeout(()=>t.textContent='',4000)}
+
+/* ---------- 상관분석 ---------- */
+function addCurrentToCorr(){
+  const R=S.R,P=S.P,st=S.st; if(!R||!R.series.length) return toast('추가할 계열이 없습니다.',true);
+  const m=meta(S.pid); const axisName=st.x==='year'?'연도':P.dim_names[st.x];
+  const fixed=P.dim_names.map((n,i)=>(i===st.x||i===st.s||st.all.has(i))?null:P.dicts[i][[...st.pick[i]][0]]).filter(v=>v&&!TOTALS.has(v));
+  let added=0;
+  for(const s of R.series){
+    const pts=new Map(); R.xlabels.forEach((xl,j)=>{if(s.vals[j]!==null) pts.set(xl,s.vals[j])});
+    const nm=[m?m.name:'장표 '+S.pid, P.measures[st.measure], ...fixed, st.s!==null?s.label:null].filter(Boolean).join(' · ');
+    if(S.corr.some(c=>c.name===nm&&c.axis===axisName)) continue;
+    S.corr.push({name:nm,axis:axisName,pts,on:true}); added++;
+  }
+  renderCorr(); toast(added?`계열 ${added}개를 추가했습니다.`:'이미 추가된 계열입니다.');
+}
+function rank(a){const idx=a.map((v,i)=>[v,i]).sort((x,y)=>x[0]-y[0]);const r=new Array(a.length);for(let i=0;i<idx.length;){let j=i;while(j+1<idx.length&&idx[j+1][0]===idx[i][0])j++;const rr=(i+j)/2+1;for(let k=i;k<=j;k++)r[idx[k][1]]=rr;i=j+1}return r}
+function pearson(a,b){const n=a.length;if(n<3)return NaN;const ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n;let sab=0,saa=0,sbb=0;for(let i=0;i<n;i++){const da=a[i]-ma,db=b[i]-mb;sab+=da*db;saa+=da*da;sbb+=db*db}return saa&&sbb?sab/Math.sqrt(saa*sbb):NaN}
+function betacf(a,b,x){let m2,aa,c=1,d=1-(a+b)*x/(a+1),del,h;if(Math.abs(d)<1e-30)d=1e-30;d=1/d;h=d;for(let m=1;m<=200;m++){m2=2*m;aa=m*(b-m)*x/((a+m2-1)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;h*=d*c;aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+m2+1));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;del=d*c;h*=del;if(Math.abs(del-1)<3e-7)break}return h}
+function lgamma(z){const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-lgamma(1-z);z-=1;let x=c[0];for(let i=1;i<g+2;i++)x+=c[i]/(z+i);const t=z+g+0.5;return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x)}
+function ibeta(x,a,b){if(x<=0)return 0;if(x>=1)return 1;const bt=Math.exp(lgamma(a+b)-lgamma(a)-lgamma(b)+a*Math.log(x)+b*Math.log(1-x));return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b}
+function pval(r,n){if(!isFinite(r)||n<4)return NaN;const df=n-2,t=r*Math.sqrt(df/Math.max(1e-12,1-r*r));return ibeta(df/(df+t*t),df/2,0.5)}
+function prep(s,mode){ // 축 값 순서대로 정렬된 [label,value]
+  const isYear=s.axis==='연도'; let arr=[...s.pts.entries()];
+  if(isYear){ const [y0,y1]=yRange(); arr=arr.filter(a=>+a[0]>=y0&&+a[0]<=y1).sort((a,b)=>+a[0]-+b[0]) }
+  if(isYear&&mode!=='0'){const out=[];for(let i=1;i<arr.length;i++){if(+arr[i][0]!==+arr[i-1][0]+1)continue;const v0=arr[i-1][1],v1=arr[i][1];out.push([arr[i][0],mode==='1'?v1-v0:(v0?(v1/v0-1)*100:NaN)])}arr=out.filter(x=>isFinite(x[1]))}
+  return new Map(arr);
+}
+function pair(A,B,lag,isYear){const xs=[],ys=[],lab=[];for(const [k,v] of A){const kb=isYear?String(+k+lag):k;if(B.has(kb)){xs.push(v);ys.push(B.get(kb));lab.push(k)}}return {xs,ys,lab}}
+function corrOf(A,B,lag,isYear,method){const p=pair(A,B,lag,isYear);let r;if(method==='spearman')r=pearson(rank(p.xs),rank(p.ys));else r=pearson(p.xs,p.ys);return {r,n:p.xs.length,p:pval(r,p.xs.length),...p}}
+function divColor(r){ if(!isFinite(r)) return css('--surface-2');
+  const mix=(c1,c2,t)=>`color-mix(in srgb, ${c2} ${Math.round(t*100)}%, ${c1})`;
+  return r>=0?mix(css('--div-mid'),css('--div-pos'),Math.min(1,r)):mix(css('--div-mid'),css('--div-neg'),Math.min(1,-r)) }
+function renderCorr(){
+  $('#corrN').textContent=S.corr.length;
+  const axes=[...new Set(S.corr.map(c=>c.axis))]; const sel=$('#cAxis'); const cur=sel.value;
+  sel.innerHTML=axes.map(a=>`<option>${esc(a)}</option>`).join('')||'<option>연도</option>'; if(axes.includes(cur)) sel.value=cur;
+  const axis=sel.value; const isYear=axis==='연도';
+  $('#cDiff').disabled=!isYear; $('#cLag').disabled=!isYear;
+  const L=$('#slist'); L.innerHTML='';
+  if(!S.corr.length) L.innerHTML='<div class="empty">아직 계열이 없습니다. 왼쪽 목록에서 통계를 체크하고 "상관관계 분석"을 누르거나, 탐색 탭에서 "현재 계열을 상관분석에 추가"를 누르세요.</div>';
+  S.corr.forEach((c,i)=>{const row=document.createElement('label');row.className='sitem';
+    row.innerHTML=`<input type="checkbox" ${c.on?'checked':''}><span class="nm" title="${esc(c.name)}">${esc(c.name)}</span><span class="ax">${esc(c.axis)}·${c.pts.size}</span><button class="btn small" type="button" aria-label="계열 삭제">삭제</button>`;
+    row.querySelector('input').onchange=e=>{c.on=e.target.checked;renderCorr()};
+    row.querySelector('button').onclick=e=>{e.preventDefault();S.corr.splice(i,1);renderCorr()};L.appendChild(row)});
+  renderSets();
+  // 비율 환산: 고른 계열(예: 어린이 인구)로 나머지를 나눠 10만 명당 값으로
+  const rs=$('#cRate'), yearSer=S.corr.filter(c=>c.on&&c.axis==='연도');
+  rs.innerHTML='<option value="">없음</option>'+yearSer.map(c=>`<option value="${esc(c.name)}">÷ ${esc(c.name)} × 10만</option>`).join('');
+  if(!yearSer.some(c=>c.name===S.rateDen)) S.rateDen=''; rs.value=S.rateDen; rs.disabled=!isYear;
+  const den=isYear&&S.rateDen?S.corr.find(c=>c.name===S.rateDen):null;
+  let act=S.corr.filter(c=>c.on&&c.axis===axis);
+  if(den) act=act.filter(c=>c!==den).map(c=>{ if(den.src&&c.src===den.src) return c; /* 같은 인구 장표의 다른 연령구분은 나누지 않음 */ const pts=new Map(); for(const [k,v] of c.pts){const d=den.pts.get(k); if(d) pts.set(k,v/d*1e5)} return {...c,name:c.name+' (10만 명당)',pts}});
+  drawTrend(isYear?act:[]);
+  const mode=$('#cDiff').value, lag=+$('#cLag').value||0, method=$('#cMethod').value;
+  const M=$('#cmat');
+  if(act.length<2){M.innerHTML='<div class="empty">같은 맞춤 축을 가진 계열을 2개 이상 선택하세요.</div>';drawScatter(null);return}
+  const PR=act.map(c=>prep(c,isYear?mode:'0'));
+  const short=s=>s.length>30?s.slice(0,11)+'…'+s.slice(-18):s;
+  let h='<table class="corr"><tr><th></th>'+act.map((c,j)=>`<th title="${esc(c.name)}">${j+1}</th>`).join('')+'</tr>';
+  act.forEach((c,i)=>{h+=`<tr><th title="${esc(c.name)}">${i+1}. ${esc(short(c.name))}</th>`;act.forEach((d,j)=>{const R=corrOf(PR[i],PR[j],i===j?0:lag,isYear,method);const t=isFinite(R.r)?R.r.toFixed(2):'–';
+    const ink=Math.abs(R.r)>0.6?'#ffffff':'inherit';h+=`<td data-i="${i}" data-j="${j}" style="background:${divColor(R.r)};color:${ink}" class="${S.sel[0]===i&&S.sel[1]===j?'sel':''}" title="r=${t}, n=${R.n}${isFinite(R.p)?', p='+R.p.toFixed(3):''}">${t}</td>`});h+='</tr>'});
+  M.innerHTML=h+'</table>';
+  M.querySelectorAll('td').forEach(td=>td.onclick=()=>{S.sel=[+td.dataset.i,+td.dataset.j];renderCorr()});
+  if(S.sel[0]>=act.length||S.sel[1]>=act.length||S.sel[0]===S.sel[1]) S.sel=[0,1];
+  const [a,b]=S.sel; drawScatter(act[a],act[b],corrOf(PR[a],PR[b],lag,isYear,method),isYear,mode,lag,method);
+}
+function drawScatter(A,B,R,isYear,mode,lag,method){
+  if(S.sc){S.sc.destroy();S.sc=null}
+  const st=$('#cstat');
+  if(!A){$('#scTitle').textContent='산점도';st.innerHTML='';CTL.sc.after(null);return}
+  const key=A.name+'|'+B.name+'|'+mode+'|'+lag; if(CTL.sc._key!==key){CTL.sc.reset(true);CTL.sc._key=key}
+  CTL.sc.names=['A: '+A.name,'B: '+B.name]; const sv=CTL.sc.prep();
+  $('#scTitle').textContent='산점도 — 행렬 칸을 누르면 바뀝니다';
+  const fg=css('--fg-2'),grid=css('--line'),c=css('--s1'),surf=css('--surface');
+  S.sc=new Chart($('#scatter'),{type:'scatter',data:{datasets:[{data:R.xs.map((x,i)=>({x,y:R.ys[i],l:R.lab[i]})),backgroundColor:c,borderColor:surf,borderWidth:2,pointRadius:5,pointHoverRadius:7}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:t=>`${t.raw.l}: ${fmt.format(t.raw.x)} / ${fmt.format(t.raw.y)}`}}},
+    scales:{x:{min:sv?sv.x[0]:undefined,max:sv?sv.x[1]:undefined,title:{display:true,text:'A: '+A.name,color:fg},ticks:{color:fg,callback:v=>fmt.format(v)},grid:{color:grid}},y:{min:sv?sv.y[0]:undefined,max:sv?sv.y[1]:undefined,title:{display:true,text:'B: '+B.name,color:fg},ticks:{color:fg,callback:v=>fmt.format(v)},grid:{color:grid}}}}});
+  CTL.sc.after(S.sc);
+  const sig=!isFinite(R.p)?'':R.p<0.01?'p<0.01':R.p<0.05?'p<0.05':'유의하지 않음 (p≥0.05)';
+  st.innerHTML=`<span>${method==='spearman'?'ρ':'r'} <b>${isFinite(R.r)?R.r.toFixed(3):'–'}</b></span><span>점 개수 <b>${R.n}</b></span><span>p값 <b>${isFinite(R.p)?R.p.toFixed(4):'–'}</b> ${sig}</span>`+
+    (isYear?`<span>처리 <b>${{0:'원값',1:'1차 차분',pct:'증감률'}[mode]}</b>${lag?` · 시차 <b>${lag}년</b>`:''}</span>`:'');
+}
+
+/* ---------- 체크한 통계 → 상관관계 분석 ---------- */
+function yRange(){ let a=+$('#cY0').value||0, b=+$('#cY1').value||9999; return a<=b?[a,b]:[b,a] }
+function newSet(pid,P){ // 장표 하나 = 조건 묶음. 기본: 연도별, 다른 축은 합계(없으면 모두 합산), 연령구분 축은 값별 계열
+  const m=meta(pid), st=defaultState(P,m), nd=P.dim_names.length, fix={};
+  const ag=P.dim_names.findIndex(n=>/연령구분/.test(n)), split=ag>=0?ag:null;
+  for(let i=0;i<nd;i++){ if(i===split) continue;
+    if(i===st.s||i===st.x){const t=P.dicts[i].findIndex(v=>TOTALS.has(v)); fix[i]=t>=0?t:(isMetric(P,i)?0:-1); continue}
+    fix[i]=st.all.has(i)?-1:([...st.pick[i]][0]??0) }
+  return {id:++S.setSeq,pid,name:m?m.name:'장표 '+pid,measure:st.measure,fix,split};
+}
+function seriesOfSet(T,P){
+  const nd=P.dim_names.length, st={measure:T.measure,y0:P.years[0],y1:P.years.at(-1),x:'year',s:T.split,pick:P.dicts.map(()=>new Set([0])),all:new Set(),kind:'line',norm:'raw'};
+  for(let i=0;i<nd;i++){
+    if(i===T.split){const d=P.dicts[i]; let a=d.map((v,j)=>j); if(!/연령구분/.test(P.dim_names[i])) a=a.filter(j=>!TOTALS.has(d[j])); st.pick[i]=new Set(a.slice(0,12)); continue}
+    const f=T.fix[i]; if(f===-1) st.all.add(i); else st.pick[i]=new Set([f??0]) }
+  const R=compute(P,st);
+  const fixed=P.dim_names.map((n,i)=>i===T.split||T.fix[i]===-1?null:P.dicts[i][T.fix[i]]).filter(v=>v&&!TOTALS.has(v));
+  return R.series.map(s=>{ const pts=new Map(); R.xlabels.forEach((xl,j)=>{if(s.vals[j]!==null) pts.set(xl,s.vals[j])});
+    return {name:[T.name,P.measures[T.measure],...fixed,T.split!==null?s.label:null].filter(Boolean).join(' · '),axis:'연도',pts,on:true,src:T.id} });
+}
+async function rebuildSet(T){
+  const P=await getPattern(T.pid); if(!P) return;
+  const old=new Map(S.corr.filter(c=>c.src===T.id).map(c=>[c.name,c.on])), at=S.corr.findIndex(c=>c.src===T.id);
+  const neu=seriesOfSet(T,P).map(c=>({...c,on:old.has(c.name)?old.get(c.name):true}));
+  S.corr=S.corr.filter(c=>c.src!==T.id); S.corr.splice(at<0?S.corr.length:at,0,...neu);
+}
+async function runMulti(stay){
+  const pids=[...S.checked].filter(p=>meta(p)&&hasData(p)); if(!pids.length) return toast('체크한 통계가 없습니다.',true);
+  S.corr=[]; S.sets=[]; S.rateDen=''; S.sel=[0,1]; CTL.tr.reset(true); CTL.tr.hidden.clear(); CTL.sc.reset(true);
+  if(stay===true){showTab('stat');$('#sPool').textContent='불러오는 중…'} else {showTab('corr'); $('#slist').innerHTML='<div class="empty">불러오는 중…</div>'}
+  for(const pid of pids){ const P=await getPattern(pid); if(!P) continue; const T=newSet(pid,P); S.sets.push(T); await rebuildSet(T) }
+  const ys=S.corr.flatMap(c=>[...c.pts.keys()].map(Number)); if(ys.length){$('#cY0').value=Math.min(...ys);$('#cY1').value=Math.max(...ys)}
+  [...$('#cAxis').options].some(o=>o.value==='연도')||($('#cAxis').innerHTML='<option>연도</option>'); $('#cAxis').value='연도';
+  if(ys.length){$('#sY0').value=Math.min(...ys);$('#sY1').value=Math.max(...ys)}
+  if(stay===true){renderCorr();showTab('stat')} else renderCorr(); toast(`통계 ${S.sets.length}개에서 계열 ${S.corr.length}개를 만들었습니다.`);
+}
+function renderSets(){
+  const box=$('#sets'); box.innerHTML=''; $('#setsCard').hidden=!S.sets.length;
+  S.sets.forEach(T=>{ const P=S.cache.get(T.pid); if(!P) return; const el=document.createElement('div'); el.className='setbox';
+    const n=S.corr.filter(c=>c.src===T.id).length;
+    let h=`<div class="sethead"><b title="${esc(meta(T.pid)?.path||'')}">${esc(T.name)} <span class="crumb">계열 ${n}개</span></b><span><button class="btn small" data-a="open" type="button">탐색에서 열기</button> <button class="btn small" data-a="del" type="button">빼기</button></span></div><div class="setctl">`;
+    h+=`<div class="field"><label>수치항목</label><select data-k="m">${P.measures.map((m,i)=>`<option value="${i}">${esc(m)}</option>`).join('')}</select></div>`;
+    P.dim_names.forEach((nm,i)=>{const met=isMetric(P,i); h+=`<div class="field"><label>${esc(nm)}${met?' (지표)':''}</label><select data-k="d" data-i="${i}"><option value="split">▦ 계열로 나누기</option>${met?'':'<option value="-1">(모두 합산)</option>'}${P.dicts[i].map((v,j)=>`<option value="${j}">${esc(v||'(빈값)')}</option>`).join('')}</select></div>`});
+    el.innerHTML=h+'</div>';
+    const ms=el.querySelector('[data-k=m]'); ms.value=T.measure; ms.onchange=async()=>{T.measure=+ms.value; await rebuildSet(T); renderCorr()};
+    el.querySelectorAll('[data-k=d]').forEach(sl=>{ const i=+sl.dataset.i; sl.value=T.split===i?'split':String(T.fix[i]??0);
+      sl.onchange=async()=>{ if(sl.value==='split'){ if(T.split!==null&&T.split!==i){const t=P.dicts[T.split].findIndex(v=>TOTALS.has(v)); T.fix[T.split]=t>=0?t:(isMetric(P,T.split)?0:-1)} T.split=i }
+        else { if(T.split===i) T.split=null; T.fix[i]=+sl.value } await rebuildSet(T); renderCorr() } });
+    el.querySelector('[data-a=del]').onclick=()=>{ S.sets=S.sets.filter(z=>z!==T); S.corr=S.corr.filter(c=>c.src!==T.id); S.checked.delete(T.pid); saveChecked(); renderTree(); renderCorr() };
+    el.querySelector('[data-a=open]').onclick=()=>{ selectPattern(T.pid); showTab('explore') };
+    box.appendChild(el) });
+}
+function drawTrend(act){
+  if(S.tr){S.tr.destroy();S.tr=null}
+  const card=$('#trCard'), lg=$('#tlegend'); lg.innerHTML='';
+  if(!act.length){card.hidden=true; CTL.tr.after(null); return} card.hidden=false;
+  const [y0,y1]=yRange(); const labels=[...new Set(act.flatMap(c=>[...c.pts.keys()]))].map(Number).filter(y=>y>=y0&&y<=y1).sort((a,b)=>a-b).map(String);
+  const mode=$('#tNorm').value, hid=CTL.tr.hidden, fg=css('--fg-2'), grid=css('--line'), surf=css('--surface');
+  const ds=act.map((c,k)=>{ const raw=labels.map(l=>c.pts.has(l)?c.pts.get(l):null); let v=raw;
+    if(mode==='index'){const b=raw.find(x=>x!=null&&x!==0); v=raw.map(x=>x==null||!b?null:x/b*100)}
+    else if(mode==='z'){const a=raw.filter(x=>x!=null), m=a.reduce((p,q)=>p+q,0)/(a.length||1), sd=Math.sqrt(a.reduce((p,q)=>p+(q-m)**2,0)/Math.max(1,a.length-1))||1; v=raw.map(x=>x==null?null:(x-m)/sd)}
+    const col=colorFor(k,k), lb=(k+1)+'. '+c.name;
+    return {label:lb,data:v,_raw:raw,hidden:hid.has(lb),borderColor:col,backgroundColor:col,borderWidth:2,pointRadius:3,pointHoverRadius:5,pointBackgroundColor:col,pointBorderColor:surf,pointBorderWidth:2,spanGaps:true,tension:0} });
+  lg.innerHTML=ds.map((d,k)=>`<span data-k="${k}" class="${d.hidden?'off':''}" title="클릭해서 숨기기/보이기"><i style="background:${d.borderColor}"></i>${esc(d.label)}</span>`).join('');
+  lg.querySelectorAll('[data-k]').forEach(el=>el.onclick=()=>{const k=+el.dataset.k,c=S.tr;if(!c)return;const v=!c.isDatasetVisible(k);c.setDatasetVisibility(k,v);
+    const nm=c.data.datasets[k].label; v?hid.delete(nm):hid.add(nm); el.classList.toggle('off',!v); CTL.tr.fitY(c); c.update('none'); CTL.tr.renderBar()});
+  $('#trTitle').textContent='추세 비교 — '+{index:'첫 연도=100',z:'표준화(z점수)',raw:'원값'}[mode]+(S.rateDen?' · 10만 명당':'');
+  const view=CTL.tr.prep(labels);
+  S.tr=new Chart($('#trend'),{type:'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const r=c.dataset._raw[c.dataIndex]; return `${c.dataset.label}: ${c.parsed.y==null?'–':fmt.format(c.parsed.y)}${mode!=='raw'&&r!=null?' (원값 '+fmt.format(r)+')':''}`}}}},
+    scales:{x:{min:view?view[0]:undefined,max:view?view[1]:undefined,ticks:{color:fg},grid:{display:false},border:{color:css('--line-strong')}},y:{beginAtZero:false,ticks:{color:fg,callback:v=>fmt.format(v)},grid:{color:grid},border:{display:false}}}}});
+  CTL.tr.after(S.tr);
+}
+
+/* ---------- 통계 기법 (5종) ----------
+   분석 대상 = 상관관계 분석 탭에 모인 연도 계열(체크한 통계 + 탐색에서 추가한 계열, 켜진 것만, 비율 환산 반영)
+   ① 추세·변곡점: Mann-Kendall 추세 검정 + Sen 기울기 + Pettitt 변곡점
+   ② 시차상관·그레인저 인과: 교차상관함수(CCF) + Granger F 검정
+   ③ 다중회귀: OLS (표준화 계수·VIF·더빈-왓슨)
+   ④ 주성분·군집: 상관행렬 PCA(설명력·적재값) + 계층적 군집(평균연결, 거리 1−r)
+   ⑤ 중단 시계열: 분절 회귀 y = b0 + b1·t + b2·D + b3·(t−T)·D  (도입 시점의 수준·기울기 변화)
+   결과는 모두 같은 행 형식(run_id, 기법, 실행시각, 기간, 처리, 대상, 상대, 항목, 통계량, 값, p값, n, 비고)으로 담아 CSV/JSON 으로 합칠 수 있음 */
+const MNAME={trend:'추세·변곡점',lag:'시차상관·그레인저',ols:'다중회귀',pca:'주성분·군집',its:'중단 시계열'};
+const MODE_NM={raw:'원값',log:'로그',diff:'1차 차분',pct:'증감률(%)',z:'표준화'};
+const ST={
+  mean:a=>a.reduce((p,q)=>p+q,0)/a.length,
+  sd:a=>{const m=ST.mean(a);return Math.sqrt(a.reduce((p,q)=>p+(q-m)**2,0)/Math.max(1,a.length-1))},
+  median:a=>{const s=[...a].sort((x,y)=>x-y),n=s.length;return n?(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2):NaN},
+  tp:(t,df)=>!isFinite(t)||df<1?NaN:ibeta(df/(df+t*t),df/2,0.5),
+  fp:(F,d1,d2)=>!isFinite(F)||d1<1||d2<1?NaN:(F<=0?1:ibeta(d2/(d2+d1*F),d2/2,d1/2)),
+  np:z=>{const x=Math.abs(z)/Math.SQRT2,t=1/(1+0.3275911*x);return t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))))*Math.exp(-x*x)}, // 양측 p = erfc(|z|/√2)
+  inv(A){const n=A.length,M=A.map((r,i)=>[...r,...A.map((_,j)=>i===j?1:0)]);
+    for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+      if(Math.abs(M[p][c])<1e-10*Math.max(1,Math.abs(M[c][c]))) return null; [M[c],M[p]]=[M[p],M[c]];
+      const d=M[c][c];for(let j=0;j<2*n;j++)M[c][j]/=d;
+      for(let r=0;r<n;r++){if(r===c)continue;const f=M[r][c];if(f)for(let j=0;j<2*n;j++)M[r][j]-=f*M[c][j]}}
+    return M.map(r=>r.slice(n))},
+  ols(y,cols,names,noVif){const n=y.length,k=cols.length+1; if(n<=k) return {err:`관측치 ${n}개가 계수 ${k}개보다 많아야 합니다.`};
+    const X=y.map((_,i)=>[1,...cols.map(c=>c[i])]);
+    // 수치 안정성: 열마다 중심화·축척한 뒤 풀고 되돌림
+    const mu=[0,...cols.map(c=>ST.mean(c))], sc=[1,...cols.map(c=>ST.sd(c)||1)];
+    const Z=X.map(r=>r.map((v,j)=>j?(v-mu[j])/sc[j]:1));
+    const XtX=[...Array(k)].map((_,a)=>[...Array(k)].map((_,b)=>Z.reduce((s,r)=>s+r[a]*r[b],0)));
+    const Xty=[...Array(k)].map((_,a)=>Z.reduce((s,r,i)=>s+r[a]*y[i],0));
+    const iv=ST.inv(XtX); if(!iv) return {err:'설명변수끼리 완전히 겹칩니다(다중공선성). 변수를 줄이세요.'};
+    const g=iv.map(r=>r.reduce((s,v,j)=>s+v*Xty[j],0));
+    const fit=Z.map(r=>r.reduce((s,v,j)=>s+v*g[j],0)), res=y.map((v,i)=>v-fit[i]);
+    const rss=res.reduce((s,v)=>s+v*v,0), my=ST.mean(y), tss=y.reduce((s,v)=>s+(v-my)**2,0), df=n-k, s2=rss/df;
+    const gse=iv.map((r,j)=>Math.sqrt(Math.max(0,r[j]*s2)));
+    // 원래 척도로: b_j = g_j/sc_j, b0 = g0 − Σ g_j·mu_j/sc_j
+    const b=g.map((v,j)=>j?v/sc[j]:v-g.slice(1).reduce((s,w,i)=>s+w*mu[i+1]/sc[i+1],0));
+    const L=[...Array(k)].map((_,j)=>[...Array(k)].map((_,i)=>j===0?(i===0?1:-mu[i]/sc[i]):(i===j?1/sc[j]:0))); // b = L g
+    const covg=iv.map(r=>r.map(v=>v*s2)); const se=L.map(l=>Math.sqrt(Math.max(0,l.reduce((s,a,i)=>s+a*l.reduce((t,c,j)=>t+c*covg[i][j],0),0))));
+    const t=b.map((v,j)=>se[j]?v/se[j]:NaN), p=t.map(v=>ST.tp(v,df));
+    const r2=tss?1-rss/tss:NaN, ar2=1-(1-r2)*(n-1)/df, F=k>1?((tss-rss)/(k-1))/s2:NaN, Fp=ST.fp(F,k-1,df);
+    let dn=0; for(let i=1;i<n;i++) dn+=(res[i]-res[i-1])**2;
+    const sy=ST.sd(y), beta=b.map((v,j)=>j?v*ST.sd(cols[j-1])/sy:NaN);
+    const vif=noVif?[]:cols.map((c,j)=>{ if(cols.length<2) return 1; const o=cols.filter((_,i)=>i!==j); const r=ST.ols(c,o,[],true); return r.err?Infinity:1/Math.max(1e-12,1-r.r2) });
+    return {n,k,b,se,t,p,beta,vif,r2,ar2,F,Fp,dw:rss?dn/rss:NaN,rss,fit,res,df,names:['(절편)',...names]}},
+  mk(ys,vs){const n=vs.length; if(n<4) return null; let S=0; const sl=[];
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){S+=Math.sign(vs[j]-vs[i]); sl.push((vs[j]-vs[i])/(ys[j]-ys[i]))}
+    const cnt=new Map(); vs.forEach(v=>cnt.set(v,(cnt.get(v)||0)+1)); let tie=0; for(const t of cnt.values()) tie+=t*(t-1)*(2*t+5);
+    const vr=(n*(n-1)*(2*n+5)-tie)/18, z=S>0?(S-1)/Math.sqrt(vr):S<0?(S+1)/Math.sqrt(vr):0;
+    const slope=ST.median(sl), icpt=ST.median(vs.map((v,i)=>v-slope*ys[i]));
+    return {n,S,tau:S/(n*(n-1)/2),z,p:ST.np(z),slope,icpt}},
+  pettitt(vs){const n=vs.length; if(n<4) return null; let best=0,bi=-1;
+    for(let t=0;t<n-1;t++){let U=0;for(let i=0;i<=t;i++)for(let j=t+1;j<n;j++)U+=Math.sign(vs[j]-vs[i]); if(Math.abs(U)>Math.abs(best)){best=U;bi=t}}
+    return {K:Math.abs(best),idx:bi,p:Math.min(1,2*Math.exp(-6*best*best/(n**3+n**2)))}},
+  jacobi(A){const n=A.length,a=A.map(r=>[...r]),V=a.map((_,i)=>a.map((_,j)=>i===j?1:0));
+    for(let sw=0;sw<100;sw++){let off=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)off+=a[i][j]**2; if(off<1e-20)break;
+      for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){ if(Math.abs(a[p][q])<1e-15) continue;
+        const th=(a[q][q]-a[p][p])/(2*a[p][q]), t=Math.sign(th||1)/(Math.abs(th)+Math.sqrt(th*th+1)), c=1/Math.sqrt(t*t+1), s=t*c;
+        for(let k=0;k<n;k++){const akp=a[k][p],akq=a[k][q];a[k][p]=c*akp-s*akq;a[k][q]=s*akp+c*akq}
+        for(let k=0;k<n;k++){const apk=a[p][k],aqk=a[q][k];a[p][k]=c*apk-s*aqk;a[q][k]=s*apk+c*aqk}
+        for(let k=0;k<n;k++){const vkp=V[k][p],vkq=V[k][q];V[k][p]=c*vkp-s*vkq;V[k][q]=s*vkp+c*vkq} }}
+    const ord=a.map((r,i)=>[r[i],i]).sort((x,y)=>y[0]-x[0]);
+    return {val:ord.map(o=>Math.max(0,o[0])),vec:ord.map(o=>V.map(r=>r[o[1]]))}}, // vec[k] = k번째 고유벡터
+};
+const fP=p=>!isFinite(p)?'–':p<0.001?'<0.001':p.toFixed(3);
+const star=p=>!isFinite(p)?'':p<0.001?'***':p<0.01?'**':p<0.05?'*':'';
+const f3=v=>v==null||!isFinite(v)?'–':Math.abs(v)>=1000?fmt.format(Math.round(v)):(+v.toFixed(Math.abs(v)<1?3:2)).toLocaleString('ko-KR',{maximumFractionDigits:3});
+const shortNm=s=>s.length>34?s.slice(0,12)+'…'+s.slice(-20):s;
+S.mc={}; S.cur={}; S.mtab='trend'; S.results=[];
+try{ S.results=JSON.parse(localStorage.getItem('taas.results')||'[]') }catch(e){}
+
+function sRange(){ let a=+$('#sY0').value||0, b=+$('#sY1').value||9999; return a<=b?[a,b]:[b,a] }
+function yearPool(){ // 상관관계 분석 탭과 같은 목록·번호 (켜진 연도 계열, 비율 환산 반영)
+  const den=S.rateDen?S.corr.find(c=>c.name===S.rateDen&&c.axis==='연도'):null;
+  let act=S.corr.filter(c=>c.on&&c.axis==='연도');
+  if(den) act=act.filter(c=>c!==den).map(c=>{ if(den.src&&c.src===den.src) return c; const pts=new Map(); for(const [k,v] of c.pts){const d=den.pts.get(k); if(d) pts.set(k,v/d*1e5)} return {...c,name:c.name+' (10만 명당)',pts}});
+  return act.map((c,i)=>({...c,no:i+1}));
+}
+function grid(series,mode){ // 연도 격자 위의 값 (빈 칸 = null), 처리 적용
+  const [y0,y1]=sRange(); const years=[]; for(let y=y0;y<=y1;y++) years.push(y);
+  let cols=series.map(s=>years.map(y=>{const v=s.pts.get(String(y)); return v==null||!isFinite(v)?null:v}));
+  if(mode==='log') cols=cols.map(c=>c.map(v=>v!=null&&v>0?Math.log(v):null));
+  if(mode==='diff'||mode==='pct') cols=cols.map(c=>c.map((v,i)=>i===0||v==null||c[i-1]==null?null:(mode==='diff'?v-c[i-1]:(c[i-1]?(v/c[i-1]-1)*100:null))));
+  return {years,cols};
+}
+function listwise(G,idx){ const rows=G.years.map((_,i)=>i).filter(i=>idx.every(j=>G.cols[j][i]!=null)); return {years:rows.map(i=>G.years[i]),cols:idx.map(j=>rows.map(i=>G.cols[j][i]))} }
+const zs=a=>{const m=ST.mean(a),s=ST.sd(a)||1;return a.map(v=>(v-m)/s)};
+function period(ys){return ys.length?`${ys[0]}-${ys.at(-1)}`:''}
+function row(method,o){return {기법:MNAME[method],처리:o.mode?MODE_NM[o.mode]||o.mode:'',기간:o.period||'',대상:o.target||'',상대:o.partner||'',항목:o.term||'',통계량:o.stat,값:o.value,p값:o.p??'',n:o.n??'',비고:o.note||''}}
+
+/* 차트 공통 */
+function drawM(key,type,labels,datasets,ex={}){
+  const C=CTL[key]; if(S.mc[key]){S.mc[key].destroy();S.mc[key]=null}
+  if(!datasets||!datasets.length){C.after(null);return}
+  const fg=css('--fg-2'),gr=css('--line'),xy=type==='scatter',view=xy?C.prep():C.prep(labels);
+  const ax=(v,t,zero)=>({min:v?v[0]:undefined,max:v?v[1]:undefined,beginAtZero:!!zero,title:{display:!!t,text:t||'',color:fg},ticks:{color:fg,callback:function(val){return xy||this.axis==='y'?fmt.format(val):this.getLabelForValue(val)}},grid:{color:gr}});
+  const scales=xy?{x:ax(view&&view.x,ex.xt),y:ax(view&&view.y,ex.yt)}:{x:{...ax(view,ex.xt),grid:{display:false}},y:ax(null,ex.yt,ex.zero)};
+  S.mc[key]=new Chart($('#cv'+key.slice(1)),{type:xy?'scatter':type,data:xy?{datasets}:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:xy?{mode:'nearest',intersect:true}:{mode:'index',intersect:false},
+    plugins:{legend:{display:!xy&&datasets.length>1,labels:{color:fg,boxWidth:12,font:{size:11}}},tooltip:{callbacks:ex.tip?{label:ex.tip}:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'–':fmt.format(c.parsed.y)}`}}},scales}});
+  C.after(S.mc[key]);
+}
+const PCOL=k=>colorFor(k,k);
+function tableHTML(head,rows,cls=''){return `<table class="grid ${cls}"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`}
+function fillSel(sel,pool,keep,allowNone){const cur=keep??sel.value; sel.innerHTML=(allowNone?'<option value="">선택 안 함</option>':'')+pool.map(c=>`<option value="${esc(c.name)}">${c.no}. ${esc(shortNm(c.name))}</option>`).join(''); if(pool.some(c=>c.name===cur)) sel.value=cur; return sel.value}
+
+/* 탭 전환·공통 렌더 */
+function renderMethods(){
+  const pool=yearPool(); S.pool=pool;
+  $('#sPool').innerHTML=pool.length?`연도 계열 <b>${pool.length}</b>개 <span class="crumb">(상관관계 분석 탭에서 켠 계열${S.rateDen?' · 10만 명당 환산':''})</span>`:'<span class="crumb">아직 계열이 없습니다 — 왼쪽 목록에서 통계를 체크하고 "체크한 통계로 모으기"를 누르세요</span>';
+  document.querySelectorAll('#stabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===S.mtab));
+  document.querySelectorAll('#v-stat .mpane').forEach(p=>p.hidden=p.dataset.m!==S.mtab);
+  $('#resN').textContent=S.results.length;
+  const fn={trend:mTrend,lag:mLag,ols:mOls,pca:mPca,its:mIts,res:mRes}[S.mtab];
+  if(S.mtab!=='res'&&!pool.length){ $(`.mpane[data-m=${S.mtab}] .mout`).innerHTML='<div class="empty">분석할 연도 계열이 없습니다.</div>'; S.cur[S.mtab]=[]; Object.keys(S.mc).forEach(k=>{S.mc[k]&&S.mc[k].destroy();S.mc[k]=null;CTL[k].after(null)}); return }
+  try{ fn(pool) }catch(e){ console.error(e); toast('계산 중 오류: '+e.message,true) }
+}
+
+/* ① 추세·변곡점 */
+function mTrend(pool){
+  const mode=$('#tMode').value, G=grid(pool,mode), out=[], rows=[];
+  pool.forEach((c,j)=>{ const ys=[],vs=[]; G.years.forEach((y,i)=>{const v=G.cols[j][i]; if(v!=null){ys.push(y);vs.push(v)}});
+    const m=ST.mk(ys,vs), pt=ST.pettitt(vs); const md=ST.median(vs);
+    const cy=pt&&pt.idx>=0?ys[pt.idx+1]:null, pre=pt?vs.slice(0,pt.idx+1):[], post=pt?vs.slice(pt.idx+1):[];
+    const mb=pre.length?ST.mean(pre):NaN, ma=post.length?ST.mean(post):NaN;
+    const pctYr=m&&mode==='raw'&&md?m.slope/Math.abs(md)*100:(m&&mode==='log'?(Math.exp(m.slope)-1)*100:NaN);
+    const dir=!m?'점 부족':m.p<0.05?(m.slope>0?'증가 ▲':'감소 ▼'):'뚜렷한 추세 없음';
+    out.push({c,ys,vs,m,pt,cy,mb,ma,pctYr,dir});
+    const pr=period(ys), base={mode,period:pr,target:c.name,n:ys.length};
+    if(m){ rows.push(row('trend',{...base,term:'Mann-Kendall',stat:'tau',value:m.tau,p:m.p,note:dir}), row('trend',{...base,term:'Mann-Kendall',stat:'Z',value:m.z,p:m.p}),
+      row('trend',{...base,term:'Sen 기울기',stat:'기울기(/년)',value:m.slope}), row('trend',{...base,term:'Sen 기울기',stat:'연평균 변화율(%)',value:pctYr})) }
+    if(pt&&cy) rows.push(row('trend',{...base,term:'Pettitt 변곡점',stat:'변화 시작 연도',value:cy,p:pt.p,note:`전 평균 ${f3(mb)} → 후 평균 ${f3(ma)}`}));
+  });
+  S.cur.trend=rows;
+  const sel=$('#tSeries'); const cur=fillSel(sel,pool);
+  $('#tOut').innerHTML=tableHTML(['#','계열','n','기간','Kendall τ','Z','p','Sen 기울기 /년','연 변화율(%)','판정','변곡 연도 (Pettitt)','p','전 평균','후 평균'],
+    out.map(o=>`<tr data-n="${esc(o.c.name)}" class="${o.c.name===cur?'on':''}"><th>${o.c.no}</th><td class="nm" title="${esc(o.c.name)}">${esc(shortNm(o.c.name))}</td><td>${o.ys.length}</td><td>${period(o.ys)}</td><td>${f3(o.m&&o.m.tau)}</td><td>${f3(o.m&&o.m.z)}</td><td>${o.m?fP(o.m.p)+star(o.m.p):'–'}</td><td>${f3(o.m&&o.m.slope)}</td><td>${f3(o.pctYr)}</td><td class="${o.m&&o.m.p<0.05?(o.m.slope>0?'pos':'neg'):''}">${o.dir}</td><td>${o.cy??'–'}</td><td>${o.pt?fP(o.pt.p)+star(o.pt.p):'–'}</td><td>${f3(o.mb)}</td><td>${f3(o.ma)}</td></tr>`),'mtab');
+  $('#tOut').querySelectorAll('tr[data-n]').forEach(tr=>tr.onclick=()=>{sel.value=tr.dataset.n;mTrend(S.pool)});
+  const o=out.find(x=>x.c.name===sel.value)||out[0]; if(!o){drawM('mTrend','line',[],[]);return}
+  const lab=G.years.map(String), val=G.years.map((y,i)=>G.cols[pool.indexOf(o.c)][i]);
+  const ds=[{label:'값 ('+MODE_NM[mode]+')',data:val,borderColor:PCOL(0),backgroundColor:PCOL(0),pointRadius:3,borderWidth:2,spanGaps:true}];
+  if(o.m) ds.push({label:'Sen 추세선',data:G.years.map(y=>o.ys.length&&y>=o.ys[0]&&y<=o.ys.at(-1)?o.m.icpt+o.m.slope*y:null),borderColor:PCOL(1),borderDash:[6,4],pointRadius:0,borderWidth:2});
+  if(o.cy) ds.push({label:`변곡 전·후 평균 (${o.cy}년~)`,data:G.years.map(y=>!o.ys.length||y<o.ys[0]||y>o.ys.at(-1)?null:y<o.cy?o.mb:o.ma),borderColor:PCOL(3),stepped:'middle',pointRadius:0,borderWidth:2});
+  $('#hTrend').textContent=`${o.c.no}. ${shortNm(o.c.name)} — ${o.dir}${o.cy?` · 변곡 ${o.cy}년`:''}`;
+  drawM('mTrend','line',lab,ds);
+}
+
+/* ② 시차상관·그레인저 */
+function granger(x,y,L){ // x→y : 같은 연도 격자(빈 칸 null)
+  const Y=[],R=[],U=[]; for(let i=L;i<y.length;i++){ const ly=[],lx=[]; let ok=y[i]!=null; for(let l=1;l<=L&&ok;l++){ if(y[i-l]==null||x[i-l]==null) ok=false; else {ly.push(y[i-l]);lx.push(x[i-l])} } if(!ok) continue; Y.push(y[i]); R.push(ly); U.push([...ly,...lx]) }
+  const n=Y.length; if(n<2*L+4) return {n,err:'점 부족'};
+  const cr=[...Array(L)].map((_,j)=>R.map(r=>r[j])), cu=[...Array(2*L)].map((_,j)=>U.map(r=>r[j]));
+  const r=ST.ols(Y,cr,[],true), u=ST.ols(Y,cu,[],true); if(r.err||u.err) return {n,err:r.err||u.err};
+  const d2=n-2*L-1, F=((r.rss-u.rss)/L)/(u.rss/d2); return {n,F,p:ST.fp(F,L,d2),d1:L,d2};
+}
+function ccf(x,y,k){const a=[],b=[]; for(let i=0;i<x.length;i++){const j=i+k; if(j<0||j>=y.length) continue; if(x[i]!=null&&y[j]!=null){a.push(x[i]);b.push(y[j])}} return {r:pearson(a,b),n:a.length}}
+function mLag(pool){
+  const mode=$('#gMode').value, L=+$('#gLag').value||1, G=grid(pool,mode);
+  const xs=fillSel($('#gX'),pool), ys0=fillSel($('#gY'),pool,$('#gY').value||(pool[1]&&pool[1].name));
+  const xi=pool.findIndex(c=>c.name===$('#gX').value), yi=pool.findIndex(c=>c.name===$('#gY').value), rows=[];
+  let html='';
+  if(xi>=0&&yi>=0&&xi!==yi){
+    const X=G.cols[xi], Y=G.cols[yi], K=Math.max(L,3), lags=[]; for(let k=-K;k<=K;k++) lags.push(k);
+    const C=lags.map(k=>ccf(X,Y,k)), nn=Math.max(...C.map(c=>c.n)), bound=2/Math.sqrt(Math.max(1,nn));
+    const best=C.reduce((b,c,i)=>isFinite(c.r)&&Math.abs(c.r)>Math.abs(b.r||0)?{...c,k:lags[i]}:b,{r:0,k:0});
+    C.forEach((c,i)=>rows.push(row('lag',{mode,period:period(G.years),target:pool[yi].name,partner:pool[xi].name,term:'교차상관',stat:`r (시차 ${lags[i]})`,value:c.r,p:pval(c.r,c.n),n:c.n,note:lags[i]>0?'X가 앞섬':lags[i]<0?'Y가 앞섬':'같은 해'})));
+    const g=[]; for(let l=1;l<=L;l++){ const a=granger(X,Y,l), b=granger(Y,X,l); g.push([l,a,b]);
+      rows.push(row('lag',{mode,period:period(G.years),target:pool[yi].name,partner:pool[xi].name,term:`Granger X→Y (시차 ${l})`,stat:'F',value:a.F,p:a.p,n:a.n,note:a.err||''}));
+      rows.push(row('lag',{mode,period:period(G.years),target:pool[xi].name,partner:pool[yi].name,term:`Granger Y→X (시차 ${l})`,stat:'F',value:b.F,p:b.p,n:b.n,note:b.err||''})) }
+    const gtxt=(o)=>o.err?`<td colspan="2">${o.err} (n=${o.n})</td>`:`<td>${f3(o.F)}</td><td class="${o.p<0.05?'sig':''}">${fP(o.p)}${star(o.p)}</td>`;
+    html=`<div class="stat"><span>가장 강한 교차상관 <b>r=${f3(best.r)}</b> · 시차 <b>${best.k}</b>년 ${best.k>0?'(X가 앞섬)':best.k<0?'(Y가 앞섬)':'(같은 해)'}</span><span>유의 기준선 ±${f3(bound)} (≈2/√n)</span></div>`+
+      tableHTML(['시차','X→Y : X의 과거가 Y를 설명하나 · F','p','Y→X : Y의 과거가 X를 설명하나 · F','p'],g.map(([l,a,b])=>`<tr><th>${l}년</th>${gtxt(a)}${gtxt(b)}</tr>`),'mtab');
+    $('#hLag').textContent=`교차상관 — X: ${pool[xi].no} · Y: ${pool[yi].no} (${MODE_NM[mode]})`;
+    drawM('mLag','bar',lags.map(k=>(k>0?'+':'')+k),[{label:'교차상관 r',data:C.map(c=>c.r),backgroundColor:C.map(c=>Math.abs(c.r)>bound?PCOL(1):css('--line-strong')),borderRadius:3},
+      {type:'line',label:'+기준',data:lags.map(()=>bound),borderColor:PCOL(3),borderDash:[5,4],pointRadius:0,borderWidth:1.5},{type:'line',label:'−기준',data:lags.map(()=>-bound),borderColor:PCOL(3),borderDash:[5,4],pointRadius:0,borderWidth:1.5}],{xt:'시차 (양수 = X가 Y보다 앞섬, 년)'});
+  } else { html='<div class="empty">X와 Y에 서로 다른 계열을 고르세요.</div>'; drawM('mLag','bar',[],[]) }
+  // 모든 쌍 그레인저 행렬
+  if($('#gAll').checked&&pool.length>1){
+    let h='<h4 class="sub2">모든 쌍 그레인저 p값 (행 → 열 : 행 계열의 과거가 열 계열을 설명, 시차 '+L+'년)</h4><div style="overflow:auto"><table class="corr"><tr><th></th>'+pool.map(c=>`<th title="${esc(c.name)}">${c.no}</th>`).join('')+'</tr>';
+    pool.forEach((a,i)=>{h+=`<tr><th title="${esc(a.name)}">${a.no}. ${esc(shortNm(a.name))}</th>`; pool.forEach((b,j)=>{ if(i===j){h+='<td style="background:var(--surface-2)">–</td>';return}
+      const g=granger(G.cols[i],G.cols[j],L); const p=g.p; const t=g.err?'·':fP(p);
+      if(!g.err) rows.push(row('lag',{mode,period:period(G.years),target:b.name,partner:a.name,term:`Granger 행렬 (시차 ${L})`,stat:'F',value:g.F,p,n:g.n}));
+      const bg=!isFinite(p)?'var(--surface-2)':`color-mix(in srgb, ${css('--div-pos')} ${Math.round(Math.max(0,1-p/0.1)*100)}%, ${css('--div-mid')})`;
+      h+=`<td style="background:${bg};color:${isFinite(p)&&p<0.03?'#fff':'inherit'}" title="${esc(a.name)} → ${esc(b.name)} : F=${f3(g.F)}, p=${fP(p)}, n=${g.n}">${t}</td>` }); h+='</tr>'});
+    html+=h+'</table></div><div class="hint">진할수록 p가 작음(0.1 이상은 색 없음). 연도 시계열이 짧아 시차 1~2년이 적당합니다.</div>';
+  }
+  $('#gOut').innerHTML=html; S.cur.lag=rows;
+}
+
+/* ③ 다중회귀 */
+function mOls(pool){
+  const mode=$('#oMode').value; const yName=fillSel($('#oY'),pool,$('#oY').value||(pool.find(c=>/사고|사망|부상/.test(c.name))||pool[0]).name);
+  const box=$('#oX'), first=box.dataset.y!==yName; let prev=new Set([...box.querySelectorAll('input:checked')].map(i=>i.value));
+  if(first){ // 기본 설명변수: 종속과 다른 장표에서 하나씩, 최대 2개 (같은 장표의 합계·구성 계열을 함께 넣으면 완전 공선성)
+    const yc=pool.find(c=>c.name===yName), seen=new Set([yc&&(yc.src??yc.name)]); prev=new Set();
+    for(const c of pool){ const g=c.src??c.name; if(c.name===yName||seen.has(g)) continue; seen.add(g); prev.add(c.name); if(prev.size>=2) break } }
+  box.dataset.y=yName;
+  box.innerHTML=pool.filter(c=>c.name!==yName).map(c=>`<label class="xck" title="${esc(c.name)}"><input type="checkbox" value="${esc(c.name)}" ${prev.has(c.name)?'checked':''}>${c.no}. ${esc(shortNm(c.name))}</label>`).join('')||'<span class="crumb">다른 계열이 없습니다</span>';
+  box.querySelectorAll('input').forEach(i=>i.onchange=()=>mOls(S.pool));
+  const xn=[...box.querySelectorAll('input:checked')].map(i=>i.value), useT=$('#oTrend').checked, dy=+$('#oDummy').value||0;
+  const yi=pool.findIndex(c=>c.name===yName), xi=xn.map(n=>pool.findIndex(c=>c.name===n)).filter(i=>i>=0);
+  const G=grid(pool,mode==='z'?'raw':mode); const W=listwise(G,[yi,...xi]); let y=W.cols[0], X=W.cols.slice(1); const names=xi.map(i=>`${pool[i].no}. ${shortNm(pool[i].name)}`);
+  if(mode==='z'){ y=zs(y); X=X.map(zs) }
+  if(useT){ X.push(W.years.map(v=>v)); names.push('연도(추세)') }
+  if(dy){ X.push(W.years.map(v=>v>=dy?1:0)); names.push(`${dy}년 이후 더미`) }
+  if(yi<0||!X.length){ $('#oOut').innerHTML='<div class="empty">종속 계열과 설명 계열(또는 추세항)을 고르세요.</div>'; drawM('mOls','line',[],[]); S.cur.ols=[]; return }
+  const r=ST.ols(y,X,names);
+  if(r.err){ $('#oOut').innerHTML=`<div class="empty">${r.err} (사용 가능한 연도 ${y.length}개)</div>`; drawM('mOls','line',[],[]); S.cur.ols=[]; return }
+  const pr=period(W.years), rows=[], tgt=pool[yi].name;
+  r.names.forEach((nm,j)=>{ const pn=j===0?'(절편)':(j-1<xi.length?pool[xi[j-1]].name:nm);
+    rows.push(row('ols',{mode,period:pr,target:tgt,partner:pn,term:'계수',stat:'b',value:r.b[j],p:r.p[j],n:r.n,note:`SE ${f3(r.se[j])}, t ${f3(r.t[j])}`}));
+    if(j) rows.push(row('ols',{mode,period:pr,target:tgt,partner:pn,term:'표준화 계수',stat:'β',value:r.beta[j]}),row('ols',{mode,period:pr,target:tgt,partner:pn,term:'다중공선성',stat:'VIF',value:r.vif[j-1]})) });
+  rows.push(row('ols',{mode,period:pr,target:tgt,term:'모형',stat:'R²',value:r.r2,n:r.n}),row('ols',{mode,period:pr,target:tgt,term:'모형',stat:'수정 R²',value:r.ar2,n:r.n}),
+    row('ols',{mode,period:pr,target:tgt,term:'모형',stat:'F',value:r.F,p:r.Fp,n:r.n}),row('ols',{mode,period:pr,target:tgt,term:'잔차',stat:'Durbin-Watson',value:r.dw,n:r.n}));
+  S.cur.ols=rows;
+  const warn=[]; if(r.df<5) warn.push(`자유도가 ${r.df}로 작아 계수가 불안정합니다. 설명변수를 줄이세요.`); if(r.vif.some(v=>v>10)) warn.push('VIF 10을 넘는 변수가 있어 다중공선성이 큽니다.'); if(mode==='raw'&&!useT) warn.push('원값끼리 회귀하면 공통 추세 때문에 R²가 부풀 수 있습니다. 추세항을 넣거나 1차 차분을 쓰세요.'); if(r.dw<1||r.dw>3) warn.push(`Durbin-Watson ${f3(r.dw)} — 잔차 자기상관이 의심됩니다.`);
+  $('#oOut').innerHTML=`<div class="stat"><span>R² <b>${f3(r.r2)}</b></span><span>수정 R² <b>${f3(r.ar2)}</b></span><span>F <b>${f3(r.F)}</b> p <b>${fP(r.Fp)}${star(r.Fp)}</b></span><span>n <b>${r.n}</b> (${pr})</span><span>Durbin-Watson <b>${f3(r.dw)}</b></span></div>`+
+    (warn.length?`<div class="note">${warn.map(esc).join('<br>')}</div>`:'')+
+    tableHTML(['항목','계수 b','표준오차','t','p','표준화 β','VIF'],r.names.map((nm,j)=>`<tr><th title="${esc(j&&j-1<xi.length?pool[xi[j-1]].name:nm)}">${esc(nm)}</th><td>${f3(r.b[j])}</td><td>${f3(r.se[j])}</td><td>${f3(r.t[j])}</td><td class="${r.p[j]<0.05?'sig':''}">${fP(r.p[j])}${star(r.p[j])}</td><td>${j?f3(r.beta[j]):''}</td><td>${j?f3(r.vif[j-1]):''}</td></tr>`),'mtab');
+  $('#hOls').textContent=`실측 vs 적합 — ${pool[yi].no}. ${shortNm(tgt)} (${MODE_NM[mode]})`;
+  const lab=W.years.map(String);
+  drawM('mOls','line',lab,[{label:'실측',data:y,borderColor:PCOL(0),backgroundColor:PCOL(0),pointRadius:3,borderWidth:2},{label:'적합값',data:r.fit,borderColor:PCOL(1),borderDash:[6,4],pointRadius:2,borderWidth:2},{type:'bar',label:'잔차',data:r.res,backgroundColor:css('--line-strong'),yAxisID:'y'}]);
+}
+
+/* ④ 주성분·군집 */
+function mPca(pool){
+  const mode=$('#pMode').value, K=+$('#pK').value||3, G=grid(pool,mode==='diff'?'diff':(mode==='log'?'log':'raw'));
+  const idx=pool.map((_,i)=>i).filter(i=>G.cols[i].filter(v=>v!=null).length>=4);
+  const W=listwise(G,idx); const keep=idx.filter((_,j)=>ST.sd(W.cols[j])>0), cols=keep.map(i=>zs(W.cols[idx.indexOf(i)])); const n=W.years.length, p=cols.length;
+  if(p<2||n<4){ $('#pOut').innerHTML=`<div class="empty">공통 연도가 4개 이상인 계열이 2개 이상 필요합니다 (지금: 계열 ${p}개, 공통 연도 ${n}개). 연도 범위나 계열을 조정하세요.</div>`; drawM('mPcaS','bar',[],[]); drawM('mPcaL','scatter',[],[]); S.cur.pca=[]; return }
+  const R=cols.map(a=>cols.map(b=>a.reduce((s,v,i)=>s+v*b[i],0)/(n-1)));
+  const E=ST.jacobi(R), tot=E.val.reduce((a,b)=>a+b,0)||1, nc=Math.min(3,p);
+  const load=E.vec.slice(0,nc).map((v,k)=>{ const s=Math.sqrt(E.val[k]); const sg=v.reduce((a,b)=>a+b,0)<0?-1:1; return v.map(x=>x*s*sg) }); // 부호: 합이 양수가 되도록
+  const pr=period(W.years), rows=[];
+  E.val.slice(0,Math.min(p,6)).forEach((v,k)=>rows.push(row('pca',{mode,period:pr,target:`PC${k+1}`,term:'설명력',stat:'고유값',value:v,n,note:`설명 ${f3(v/tot*100)}%`})));
+  keep.forEach((i,j)=>load.forEach((l,k)=>rows.push(row('pca',{mode,period:pr,target:pool[i].name,partner:`PC${k+1}`,term:'적재값',stat:'loading',value:l[j],n}))));
+  // 계층적 군집 (평균연결, d = 1 − r)
+  let cl=keep.map((_,j)=>[j]); const D=(a,b)=>{let s=0;for(const i of a)for(const j of b)s+=1-R[i][j];return s/(a.length*b.length)}; const merges=[];
+  while(cl.length>Math.max(1,Math.min(K,p))){ let bi=0,bj=1,bd=Infinity; for(let i=0;i<cl.length;i++)for(let j=i+1;j<cl.length;j++){const d=D(cl[i],cl[j]); if(d<bd){bd=d;bi=i;bj=j}} merges.push(bd); cl[bi]=cl[bi].concat(cl[bj]); cl.splice(bj,1) }
+  cl.sort((a,b)=>b.length-a.length);
+  cl.forEach((g,ci)=>{ const inr=g.length>1?(()=>{let s=0,c=0;for(const a of g)for(const b of g)if(a<b){s+=R[a][b];c++}return s/c})():1;
+    g.forEach(j=>rows.push(row('pca',{mode,period:pr,target:pool[keep[j]].name,partner:`군집 ${ci+1}`,term:'계층적 군집',stat:'군집 번호',value:ci+1,n,note:`군집 내 평균 r ${f3(inr)}`}))) });
+  S.cur.pca=rows;
+  const pcH=load.map((_,k)=>`PC${k+1}`);
+  $('#pOut').innerHTML=`<div class="stat">${E.val.slice(0,nc).map((v,k)=>`<span>PC${k+1} <b>${f3(v/tot*100)}%</b></span>`).join('')}<span>누적 <b>${f3(E.val.slice(0,nc).reduce((a,b)=>a+b,0)/tot*100)}%</b></span><span>계열 <b>${p}</b> · 공통 연도 <b>${n}</b> (${pr})</span></div>`+
+    (n<=p?'<div class="note">공통 연도 수가 계열 수보다 적거나 같아 일부 주성분은 의미가 없습니다. 연도 범위를 넓히거나 계열을 줄이세요.</div>':'')+
+    '<div class="two">'+
+    `<div>${tableHTML(['#','계열',...pcH,'군집'],keep.map((i,j)=>{const ci=cl.findIndex(g=>g.includes(j));return `<tr><th>${pool[i].no}</th><td class="nm" title="${esc(pool[i].name)}">${esc(shortNm(pool[i].name))}</td>${load.map(l=>`<td style="background:${divColor(l[j])};color:${Math.abs(l[j])>0.6?'#fff':'inherit'}">${f3(l[j])}</td>`).join('')}<td><span class="cl" style="background:${PCOL(ci)}">${ci+1}</span></td></tr>`}),'mtab')}</div>`+
+    `<div>${tableHTML(['군집','계열 수','군집 내 평균 r','계열'],cl.map((g,ci)=>{let s=0,c=0;for(const a of g)for(const b of g)if(a<b){s+=R[a][b];c++}return `<tr><th><span class="cl" style="background:${PCOL(ci)}">${ci+1}</span></th><td>${g.length}</td><td>${c?f3(s/c):'–'}</td><td class="nm wrap">${g.map(j=>pool[keep[j]].no).join(', ')}</td></tr>`}),'mtab')}
+     <div class="hint">적재값: 계열과 주성분의 상관(−1~+1). PC1에 크게 실린 계열들은 같은 흐름(대개 공통 추세)을 공유합니다. 군집은 1−r 거리로 묶었습니다.</div></div></div>`;
+  $('#hPcaS').textContent='주성분 설명력 (%)';
+  drawM('mPcaS','bar',E.val.slice(0,Math.min(p,8)).map((_,k)=>`PC${k+1}`),[{label:'설명력(%)',data:E.val.slice(0,Math.min(p,8)).map(v=>v/tot*100),backgroundColor:PCOL(0),borderRadius:3},{type:'line',label:'누적(%)',data:E.val.slice(0,Math.min(p,8)).map((_,k)=>E.val.slice(0,k+1).reduce((a,b)=>a+b,0)/tot*100),borderColor:PCOL(1),pointRadius:3}],{zero:true});
+  CTL.mPcaL.names=['PC1','PC2'];
+  drawM('mPcaL','scatter',null,cl.map((g,ci)=>({label:`군집 ${ci+1}`,data:g.map(j=>({x:load[0][j],y:load[1]?load[1][j]:0,l:`${pool[keep[j]].no}. ${shortNm(pool[keep[j]].name)}`})),backgroundColor:PCOL(ci),borderColor:css('--surface'),borderWidth:2,pointRadius:6,pointHoverRadius:8})),
+    {xt:'PC1 적재값',yt:'PC2 적재값',tip:c=>`${c.raw.l}: PC1 ${f3(c.raw.x)} / PC2 ${f3(c.raw.y)}`});
+}
+
+/* ⑤ 중단 시계열 */
+function its(ys,vs,T,mode){
+  const i0=ys[0], npre=ys.filter(y=>y<T).length, npost=ys.length-npre; if(npre<3||npost<2) return {err:`개입 전 ${npre}개·후 ${npost}개 — 전 3개·후 2개 이상 필요`,npre,npost};
+  const t=ys.map(y=>y-i0), D=ys.map(y=>y>=T?1:0), tt=ys.map(y=>y>=T?y-T:0);
+  const r=ST.ols(vs,[t,D,tt],['추세','수준 변화','기울기 변화'],true); if(r.err) return {err:r.err,npre,npost};
+  const cfT=r.b[0]+r.b[1]*(T-i0); const lvlPct=mode==='log'?(Math.exp(r.b[2])-1)*100:(cfT?r.b[2]/Math.abs(cfT)*100:NaN);
+  const yl=ys.at(-1), cfL=r.b[0]+r.b[1]*(yl-i0), fitL=cfL+r.b[2]+r.b[3]*(yl-T); const endPct=mode==='log'?(Math.exp(fitL-cfL)-1)*100:(cfL?(fitL-cfL)/Math.abs(cfL)*100:NaN);
+  return {...r,npre,npost,i0,cfT,lvlPct,endPct,yl};
+}
+function mIts(pool){
+  const mode=$('#iMode').value, T=+$('#iYear').value||2017, G=grid(pool,mode), rows=[], out=[];
+  pool.forEach((c,j)=>{ const ys=[],vs=[]; G.years.forEach((y,i)=>{const v=G.cols[j][i]; if(v!=null){ys.push(y);vs.push(v)}}); const r=its(ys,vs,T,mode); out.push({c,ys,vs,r});
+    const base={mode,period:period(ys),target:c.name,partner:`개입 ${T}년`,n:ys.length};
+    if(r.err){ rows.push(row('its',{...base,term:'모형',stat:'오류',value:'',note:r.err})); return }
+    rows.push(row('its',{...base,term:'개입 전 기울기',stat:'b1',value:r.b[1],p:r.p[1]}),row('its',{...base,term:'수준 변화',stat:'b2',value:r.b[2],p:r.p[2],note:`도입 시점 반사실 대비 ${f3(r.lvlPct)}%`}),
+      row('its',{...base,term:'기울기 변화',stat:'b3',value:r.b[3],p:r.p[3],note:`개입 후 기울기 ${f3(r.b[1]+r.b[3])}`}),row('its',{...base,term:`${r.yl}년 효과`,stat:'반사실 대비(%)',value:r.endPct}),
+      row('its',{...base,term:'모형',stat:'R²',value:r.r2}),row('its',{...base,term:'잔차',stat:'Durbin-Watson',value:r.dw})) });
+  S.cur.its=rows;
+  const sel=$('#iSeries'), cur=fillSel(sel,pool);
+  $('#iOut').innerHTML=tableHTML(['#','계열','전/후 n','개입 전 기울기','수준 변화 b2','p','반사실 대비','기울기 변화 b3','p','개입 후 기울기',`${'마지막 해'} 효과`,'R²','DW'],
+    out.map(o=>{const r=o.r; if(r.err) return `<tr data-n="${esc(o.c.name)}" class="${o.c.name===cur?'on':''}"><th>${o.c.no}</th><td class="nm" title="${esc(o.c.name)}">${esc(shortNm(o.c.name))}</td><td colspan="11" class="crumb">${esc(r.err)}</td></tr>`;
+      return `<tr data-n="${esc(o.c.name)}" class="${o.c.name===cur?'on':''}"><th>${o.c.no}</th><td class="nm" title="${esc(o.c.name)}">${esc(shortNm(o.c.name))}</td><td>${r.npre}/${r.npost}</td><td>${f3(r.b[1])}</td><td class="${r.p[2]<0.05?(r.b[2]>0?'pos':'neg'):''}">${f3(r.b[2])}</td><td>${fP(r.p[2])}${star(r.p[2])}</td><td>${f3(r.lvlPct)}%</td><td class="${r.p[3]<0.05?(r.b[3]>0?'pos':'neg'):''}">${f3(r.b[3])}</td><td>${fP(r.p[3])}${star(r.p[3])}</td><td>${f3(r.b[1]+r.b[3])}</td><td>${f3(r.endPct)}% <span class="crumb">(${r.yl})</span></td><td>${f3(r.r2)}</td><td>${f3(r.dw)}</td></tr>`}),'mtab');
+  $('#iOut').querySelectorAll('tr[data-n]').forEach(tr=>tr.onclick=()=>{sel.value=tr.dataset.n;mIts(S.pool)});
+  const o=out.find(x=>x.c.name===sel.value)||out[0]; const lab=G.years.map(String);
+  if(!o||o.r.err){ $('#hIts').textContent=o?`${o.c.no}. ${shortNm(o.c.name)} — ${o.r.err}`:'중단 시계열'; drawM('mIts','line',[],[]); return }
+  const r=o.r, at=y=>o.ys.includes(y);
+  const fit=G.years.map(y=>!at(y)?null:r.b[0]+r.b[1]*(y-r.i0)+(y>=T?r.b[2]+r.b[3]*(y-T):0));
+  const cf=G.years.map(y=>y<T-1||y>o.ys.at(-1)||y<o.ys[0]?null:r.b[0]+r.b[1]*(y-r.i0));
+  $('#hIts').textContent=`${o.c.no}. ${shortNm(o.c.name)} — ${T}년 개입: 수준 ${f3(r.lvlPct)}% · 기울기 ${f3(r.b[1])}→${f3(r.b[1]+r.b[3])}`;
+  drawM('mIts','line',lab,[{label:'실측',data:G.years.map((y,i)=>G.cols[pool.indexOf(o.c)][i]),borderColor:PCOL(0),backgroundColor:PCOL(0),pointRadius:3,borderWidth:2,spanGaps:true},
+    {label:'분절 회귀 적합',data:fit,segment:{borderDash:c=>G.years[c.p0DataIndex]<T&&G.years[c.p1DataIndex]>=T?[2,4]:undefined},borderColor:PCOL(1),pointRadius:0,borderWidth:2.5,spanGaps:false},
+    {label:'개입이 없었다면 (반사실)',data:cf,borderColor:PCOL(3),borderDash:[6,4],pointRadius:0,borderWidth:2}]);
+}
+
+/* 결과 모음 */
+const RCOLS=['run_id','기법','실행시각','기간','처리','대상','상대','항목','통계량','값','p값','n','비고'];
+function saveResults(){ try{localStorage.setItem('taas.results',JSON.stringify(S.results))}catch(e){toast('브라우저 저장 공간이 부족해 결과를 기억하지 못했습니다. CSV로 저장하세요.',true)} $('#resN').textContent=S.results.length }
+function addResults(m){ const rows=S.cur[m]||[]; if(!rows.length) return toast('담을 결과가 없습니다.',true);
+  const id=`${m}-${new Date().toISOString().replace(/[-:T]/g,'').slice(0,14)}-${Math.random().toString(36).slice(2,5)}`, ts=new Date().toLocaleString('sv-SE');
+  rows.forEach(r=>S.results.push({run_id:id,...r,실행시각:ts})); saveResults(); toast(`${MNAME[m]} 결과 ${rows.length}행을 결과 모음에 담았습니다.`) }
+function toCSV(rows){ const q=v=>{v=v==null?'':String(typeof v==='number'?(isFinite(v)?+v.toPrecision(10):''):v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  return '﻿'+[RCOLS.join(','),...rows.map(r=>RCOLS.map(c=>q(r[c])).join(','))].join('\r\n') }
+function saveFile(name,text,type){ const b=new Blob([text],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000) }
+const stamp=()=>new Date().toISOString().slice(0,10).replace(/-/g,'');
+function saveCur(m){ const rows=(S.cur[m]||[]).map(r=>({run_id:'(미저장)',...r,실행시각:new Date().toLocaleString('sv-SE')})); if(!rows.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_${MNAME[m]}_${stamp()}.csv`,toCSV(rows),'text/csv;charset=utf-8'); toast('CSV로 저장했습니다.') }
+function mRes(){
+  const f=$('#rFilter').value, rows=S.results.filter(r=>!f||r.기법===f);
+  const runs=[...new Set(S.results.map(r=>r.run_id))];
+  $('#rSum').innerHTML=Object.values(MNAME).map(n=>`<span>${n} <b>${S.results.filter(r=>r.기법===n).length}</b>행</span>`).join('')+`<span>실행 <b>${runs.length}</b>회</span>`;
+  $('#rOut').innerHTML=rows.length?tableHTML(RCOLS.map(esc),rows.slice(-800).map(r=>`<tr>${RCOLS.map(c=>{const v=r[c]; return `<td class="${c==='대상'||c==='상대'||c==='비고'?'nm':''}" title="${esc(v??'')}">${typeof v==='number'?f3(v):esc(shortNm(String(v??'')))}</td>`}).join('')}</tr>`),'mtab res')+(rows.length>800?`<div class="hint">최근 800행만 표시 — 저장 파일에는 ${rows.length}행 모두 들어갑니다.</div>`:''):'<div class="empty">아직 담은 결과가 없습니다. 각 기법 탭에서 "결과 담기"를 누르세요.</div>';
+}
+
+/* ---------- 차량기술 매핑 ---------- */
+const TECH=[
+ {t:'자동긴급제동 (AEB, 차량)',std:'UN R152 · Euro NCAP AEB C2C',p:'전방 차량과의 충돌을 감지해 자동 제동. 추돌 사고가 직접 대상입니다.',name:'사고유형별 교통사고',f:{'사고유형':['추돌']},q:'차대차 추돌 건수·부상자가 장착률 확대 시기(2016년 이후)에 다른 유형보다 빠르게 줄었나?'},
+ {t:'보행자·자전거 AEB',std:'UN R152 · Euro NCAP VRU',p:'보행자·자전거 탑승자 감지 제동. 차대사람 사고의 횡단중·차도통행중이 대상입니다.',name:'사고유형별 교통사고',f:{'사고유형 대분류':['차대사람']},s:'사고유형',q:'횡단중 사망자의 주야 분포와 연령대는? 야간 감지 성능이 핵심 변수인가?'},
+ {t:'차로유지보조 (LKA/LDW/RDM)',std:'UN R79 · R130 · ISO 11270',p:'차로·도로 이탈 방지. 차량단독 도로이탈, 공작물충돌과 곡선 구간이 대상입니다.',name:'도로선형별 교통사고',f:{},q:'굽은 도로(커브)의 치사율이 직선 대비 얼마나 높은가?'},
+ {t:'지능형 속도제한 (ISA)',std:'EU GSR 2019/2144 · UN R89',p:'제한속도 인지·경고·제어. 과속 사고가 대상입니다(TAAS는 2021년부터 과속을 별도 집계).',name:'시도별 (과속) 교통사고',f:{},q:'과속 사고의 치사율(사망/사고)이 전체 평균의 몇 배인가?'},
+ {t:'운전자 상태 모니터링 (DMS/DDAW)',std:'EU GSR · UN R171 · Euro NCAP OSM',p:'졸음·부주의 감지. 법규위반 중 안전운전 의무 불이행이 대부분을 차지합니다.',name:'가해운전자 법규위반별 교통사고',f:{'법규위반':['안전운전']},q:'안전운전 의무 불이행 사고의 시간대 분포는 졸음 취약 시간(새벽·오후)과 겹치나?'},
+ {t:'음주운전 방지 (DADSS·시동잠금)',std:'도로교통법 음주운전 방지장치 · US DADSS',p:'혈중알코올 감지 시 시동 제한. 음주운전 사고가 대상입니다.',name:'월별·시간대별 (음주운전) 교통사고',f:{},q:'음주 사고가 몰리는 요일·시간대와 재범 운전자 비중은?'},
+ {t:'차체자세제어 (ESC)·노면 인지',std:'UN R140 · GTR 8',p:'미끄러짐·전복 억제. 결빙·적설·젖음 노면과 전도/전복 사고가 대상입니다.',name:'노면상태별 교통사고',f:{},q:'결빙·적설 노면 사고의 치사율과 월별 집중도는?'},
+ {t:'교차로 충돌 방지 (ICA·V2X)',std:'Euro NCAP Junction · SAE J2735 · C-ITS',p:'교차로 횡단·좌회전 충돌 예측. 도로형태 중 교차로 구간과 차대차 측면충돌이 대상입니다.',name:'교차로형태별 교통사고',f:{},q:'신호/비신호 교차로 사고 비중과 V2X 인프라 우선 구간은?'},
+ {t:'야간 시인성 (ADB·나이트비전)',std:'UN R48 · R149',p:'야간 원거리 인지. 주야별 사고에서 야간 사망 비중이 대상입니다.',name:'도로형태별·주야별 교통사고',f:{},s:'주야',q:'야간 사고 1건당 사망자가 주간보다 얼마나 많은가?'},
+ {t:'고령 운전자 지원',std:'ISO 15622 ACC · 고령자 페달 오조작 방지',p:'페달 오조작 방지·주행 보조. 노인(65세 이상) 운전자 사고가 대상입니다.',name:'사고유형별·시간대별 (노인운전자) 교통사고',f:{},q:'노인운전자 사고 증가 속도가 고령 면허 보유자 증가 속도보다 빠른가?'},
+ {t:'어린이 보호구역 대응',std:'도로교통법 제12조 · ISA 연계',p:'보호구역 내 속도 제한·감지. 어린이보호구역 내 어린이 사고가 대상입니다.',name:'월별·시간대별 (어린이보호구역내 어린이) 교통사고',f:{},q:'등하교 시간대 집중도와 보호구역 단속 강화(2020년) 전후 변화는?'},
+ {t:'이륜차·개인형 이동장치 감지',std:'Euro NCAP Motorcycle · V2X VRU',p:'이륜차 사각지대·차로변경 경고. 가해·피해 차종 중 이륜차가 대상입니다.',name:'가해운전자 차종별 교통사고',f:{'차종':['이륜']},q:'이륜차 가해 사고의 치사율과 배달 수요 증가(2020년 이후) 시기 추이는?'},
+];
+function findByName(nm){return S.index&&S.index.patterns.find(p=>p.name===nm)||S.index&&S.index.patterns.find(p=>p.name.replace(/\s+/g,'').includes(nm.replace(/\s+/g,'')))}
+function renderTech(){
+  const g=$('#techgrid'); g.innerHTML='';
+  TECH.forEach(T=>{const p=findByName(T.name); const ok=p&&hasData(p.pid);
+    const el=document.createElement('div'); el.className='tech';
+    el.innerHTML=`<div class="t"><h4>${esc(T.t)}</h4></div><div class="std">${esc(T.std)}</div><p>${esc(T.p)}</p>
+      <div class="slice">${esc(T.name)}${Object.keys(T.f).length?' · '+esc(Object.entries(T.f).map(([k,v])=>k+'='+v.join('/')).join(', ')):''}</div>
+      <div class="q">${esc(T.q)}</div>
+      <div class="acts"><button class="btn small primary" type="button" ${ok?'':'disabled'}>탐색</button><button class="btn small" type="button" ${ok?'':'disabled'}>추가</button>${ok?'':'<span class="crumb">라이브러리에 데이터 없음</span>'}</div>`;
+    const [b1,b2]=el.querySelectorAll('button');
+    const open=async(total)=>{await selectPattern(p.pid,{filter:T.f,series:total?null:T.s,x:'year'});};
+    b1.onclick=()=>{open(false);showTab('explore')};
+    b2.onclick=async()=>{await open(true);addCurrentToCorr()};
+    g.appendChild(el)});
+}
+
+/* ---------- 그래프 조작 (CANTAUROS plot 방식) ----------
+   클릭 = 기준선 M1 (가장 가까운 점에 맞춤, 형광 노랑) · Ctrl+클릭 = 비교선 M2 (형광 하늘) 와 계열별 차이
+   드래그 = 구간 확대 · Ctrl+휠 = 확대/축소 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기 · Esc = 기준선 지우기 */
+const MK=['#FFE600','#00E5FF'];
+function makeCtl(id,xy,barSel){
+  const cv=$('#'+id); if(!cv) return null; const box=cv.parentElement, bar=$(barSel||(xy?'#sbar':'#mbar'));
+  const C={xy,m:[],view:null,hover:null,drag:null,notes:[],hidden:new Set(),chart:null,names:null,_key:null,_clk:[],_hk:null};
+  const ch=()=>C.chart;
+  const P=e=>{const r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}};
+  const inA=p=>{const a=ch()&&ch().chartArea;return !!a&&p.x>=a.left-3&&p.x<=a.right+3&&p.y>=a.top-3&&p.y<=a.bottom+3};
+  C.snap=p=>{const c=ch(); if(!c) return null;
+    if(!xy){ const sx=c.scales.x, n=c.data.labels.length; if(!n) return null; let i=Math.round(sx.getValueForPixel(p.x));
+      i=Math.max(Math.max(0,Math.ceil(sx.min)),Math.min(Math.min(n-1,Math.floor(sx.max)),i));
+      let ds=null,bd=1e9; c.data.datasets.forEach((d,k)=>{ if(!c.isDatasetVisible(k)||d.data[i]==null) return; const el=c.getDatasetMeta(k).data[i]; if(!el) return; const dd=Math.abs(el.y-p.y); if(dd<bd){bd=dd;ds=k} });
+      return {k:c.data.labels[i],ds} }
+    const meta=c.getDatasetMeta(0); let j=-1,bd=1e9; meta.data.forEach((el,n)=>{const dd=Math.hypot(el.x-p.x,el.y-p.y); if(dd<bd){bd=dd;j=n}});
+    if(j<0) return null; const r=c.data.datasets[0].data[j]; return {k:r.l,x:r.x,y:r.y} };
+  C.px=m=>{const c=ch(); if(!c||!m) return null;
+    if(!xy){ const i=c.data.labels.indexOf(m.k); if(i<0) return null; const x=c.scales.x.getPixelForValue(i); let y=null;
+      if(m.ds!=null&&m.ds<c.data.datasets.length&&c.isDatasetVisible(m.ds)&&c.data.datasets[m.ds].data[i]!=null){const el=c.getDatasetMeta(m.ds).data[i]; if(el) y=el.y}
+      return {x,y,i} }
+    const d=c.data.datasets[0].data, j=d.findIndex(r=>r.l===m.k); if(j<0) return null; const el=c.getDatasetMeta(0).data[j]; return el?{x:el.x,y:el.y,r:d[j]}:null };
+  const vline=(x,c,a)=>{c.beginPath();c.moveTo(x,a.top);c.lineTo(x,a.bottom);c.stroke()};
+  const hline=(y,c,a)=>{c.beginPath();c.moveTo(a.left,y);c.lineTo(a.right,y);c.stroke()};
+  C.paint=c=>{ const a=c.chartArea, x=c.ctx; if(!a) return; x.save(); x.beginPath(); x.rect(a.left,a.top,a.right-a.left,a.bottom-a.top); x.clip();
+    const amber=css('--amber')||'#f2b705';
+    if(C.drag&&C.drag.moved){ const d=C.drag, x0=Math.min(d.x0,d.x1), x1=Math.max(d.x0,d.x1);
+      const yy=xy&&Math.abs(d.y1-d.y0)>=10?[Math.min(d.y0,d.y1),Math.max(d.y0,d.y1)]:[a.top,a.bottom];
+      x.fillStyle='rgba(242,183,5,.16)'; x.fillRect(x0,yy[0],x1-x0,yy[1]-yy[0]); x.strokeStyle=amber; x.lineWidth=1; x.strokeRect(x0,yy[0],x1-x0,yy[1]-yy[0]) }
+    if(C.hover&&!C.drag){ const q=C.px(C.hover); if(q){ x.strokeStyle=amber; x.lineWidth=1; x.setLineDash([4,4]); vline(q.x,x,a); if(xy) hline(q.y,x,a); x.setLineDash([]) } }
+    C.m.forEach((m,n)=>{ const q=C.px(m); if(!q) return; const col=MK[n];
+      x.lineWidth=5; x.strokeStyle='rgba(0,0,0,.45)'; vline(q.x,x,a); if(xy&&q.y!=null) hline(q.y,x,a);
+      x.lineWidth=2.5; x.strokeStyle=col; x.shadowColor=col; x.shadowBlur=10; vline(q.x,x,a); if(xy&&q.y!=null) hline(q.y,x,a); x.shadowBlur=0;
+      if(q.y!=null){ x.lineWidth=4; x.strokeStyle='rgba(0,0,0,.55)'; x.beginPath(); x.arc(q.x,q.y,7,0,Math.PI*2); x.stroke(); x.lineWidth=2.5; x.strokeStyle=col; x.beginPath(); x.arc(q.x,q.y,7,0,Math.PI*2); x.stroke() }
+      const t='M'+(n+1)+'  '+m.k; x.font='bold 11px '+(css('--mono')||'monospace'); const w=x.measureText(t).width+12, h=18;
+      const tx=q.x+6+w>a.right?q.x-6-w:q.x+6, ty=a.top+4+n*(h+4); x.fillStyle=col; x.fillRect(tx,ty,w,h); x.strokeStyle='rgba(0,0,0,.5)'; x.lineWidth=1; x.strokeRect(tx,ty,w,h);
+      x.fillStyle='#111'; x.textBaseline='middle'; x.fillText(t,tx+6,ty+h/2+0.5); x.textBaseline='alphabetic' });
+    x.restore(); C.placeNotes() };
+  C.prep=labels=>{ if(xy) return C.view; if(!C.view) return null; const a=labels.indexOf(C.view[0]), b=labels.indexOf(C.view[1]); if(a<0||b<0||b<=a){C.view=null;return null} return [a,b] };
+  C.fitY=c=>{ if(xy||!c) return; const o=c.options.scales.y, ox=c.options.scales.x; if(!C.view||ox.min==null){o.min=undefined;o.max=undefined;return}
+    let lo=Infinity,hi=-Infinity; c.data.datasets.forEach((d,k)=>{ if(!c.isDatasetVisible(k)) return; for(let i=ox.min;i<=ox.max;i++){const v=d.data[i]; if(v==null) continue; if(v<lo)lo=v; if(v>hi)hi=v} });
+    if(!isFinite(lo)){o.min=o.max=undefined;return} const pad=(hi-lo)*0.08||Math.abs(hi)*0.05||1;
+    const st=Math.pow(10,Math.floor(Math.log10((hi-lo)+2*pad)))/2||1; // 눈금이 깔끔하게 떨어지도록 반올림
+    o.min=(c.config.type==='bar'&&lo>=0)?0:Math.floor((lo-pad)/st)*st; o.max=Math.ceil((hi+pad)/st)*st };
+  C.applyView=()=>{ const c=ch(); if(!c) return; const o=c.options.scales;
+    if(!xy){ const v=C.prep(c.data.labels); o.x.min=v?v[0]:undefined; o.x.max=v?v[1]:undefined }
+    else { o.x.min=C.view?C.view.x[0]:undefined; o.x.max=C.view?C.view.x[1]:undefined; o.y.min=C.view?C.view.y[0]:undefined; o.y.max=C.view?C.view.y[1]:undefined }
+    C.fitY(c); c.update('none'); C.renderBar() };
+  C.resetView=()=>{ C.view=null; C.applyView() };
+  C.zoomPx=d=>{ const c=ch(); if(!c) return;
+    if(!xy){ const sx=c.scales.x, n=c.data.labels.length; let a=Math.round(sx.getValueForPixel(Math.min(d.x0,d.x1))), b=Math.round(sx.getValueForPixel(Math.max(d.x0,d.x1)));
+      a=Math.max(0,a); b=Math.min(n-1,b); if(b-a<1){ if(b<n-1) b++; else a-- } if(a<0||b<=a) return; C.view=(a===0&&b===n-1)?null:[c.data.labels[a],c.data.labels[b]] }
+    else { const sx=c.scales.x, sy=c.scales.y; const xs=[sx.getValueForPixel(d.x0),sx.getValueForPixel(d.x1)].sort((m,n)=>m-n);
+      const ys=Math.abs(d.y1-d.y0)>=10?[sy.getValueForPixel(d.y0),sy.getValueForPixel(d.y1)].sort((m,n)=>m-n):[sy.min,sy.max]; if(!(xs[1]>xs[0])||!(ys[1]>ys[0])) return; C.view={x:xs,y:ys} }
+    C.applyView() };
+  C.wheel=(p,zin)=>{ const c=ch(); if(!c) return;
+    if(!xy){ const n=c.data.labels.length; if(n<3) return; const v=C.prep(c.data.labels)||[0,n-1]; let [a,b]=v; const span=b-a, i=Math.round(c.scales.x.getValueForPixel(p.x));
+      const ns=zin?Math.max(1,Math.round(span*0.7)):Math.min(n-1,Math.max(span+2,Math.round(span*1.4))); const f=span?(i-a)/span:0.5;
+      let na=Math.round(i-f*ns), nb=na+ns; if(na<0){nb-=na;na=0} if(nb>n-1){na-=nb-(n-1);nb=n-1} na=Math.max(0,na);
+      C.view=(na===0&&nb===n-1)?null:[c.data.labels[na],c.data.labels[nb]] }
+    else { const f=zin?0.8:1.25, sx=c.scales.x, sy=c.scales.y, vx=sx.getValueForPixel(p.x), vy=sy.getValueForPixel(p.y);
+      C.view={x:[vx-(vx-sx.min)*f,vx+(sx.max-vx)*f],y:[vy-(vy-sy.min)*f,vy+(sy.max-vy)*f]} }
+    C.applyView() };
+  // 메모 (더블클릭)
+  C.addNote=p=>{ const c=ch(); const n={text:''}; if(!xy){ const s=C.snap(p); if(!s) return; n.k=s.k } else n.xv=c.scales.x.getValueForPixel(p.x);
+    n.yv=c.scales.y.getValueForPixel(p.y); const el=document.createElement('div'); el.className='memo'; el.contentEditable='true'; n.el=el;
+    el.addEventListener('input',()=>{n.text=el.innerText}); el.addEventListener('blur',()=>{n.text=el.innerText.trim(); if(!n.text){el.remove(); C.notes=C.notes.filter(z=>z!==n)}});
+    el.addEventListener('mousedown',e=>e.stopPropagation()); box.appendChild(el); C.notes.push(n); C.placeNotes(); el.focus() };
+  C.placeNotes=()=>{ const c=ch(); C.notes.forEach(n=>{ if(!c){n.el.style.display='none';return} const a=c.chartArea;
+    const x=xy?c.scales.x.getPixelForValue(n.xv):(c.data.labels.indexOf(n.k)<0?NaN:c.scales.x.getPixelForValue(c.data.labels.indexOf(n.k))), y=c.scales.y.getPixelForValue(n.yv);
+    const ok=isFinite(x)&&isFinite(y)&&x>=a.left&&x<=a.right&&y>=a.top&&y<=a.bottom; n.el.style.display=ok?'':'none'; if(ok){n.el.style.left=x+'px';n.el.style.top=y+'px'} }) };
+  C.clearNotes=()=>{ C.notes.forEach(n=>n.el.remove()); C.notes=[] };
+  // 기준선 값·차이 표
+  C.renderBar=()=>{ const c=ch(); if(!c||!C.m.length){bar.innerHTML='';return}
+    const f=v=>v==null||!isFinite(v)?'–':fmt.format(v), sg=v=>v==null||!isFinite(v)?'':v>0?'pos':v<0?'neg':'';
+    const tag=n=>`<span class="tag" style="background:${MK[n]}">M${n+1}</span>`;
+    if(!xy){ const idx=C.m.map(m=>c.data.labels.indexOf(m.k)); const two=C.m.length===2&&idx[1]>=0;
+      let h=`<table><thead><tr><th>계열</th><th>${tag(0)} ${esc(C.m[0].k)}</th>${two?`<th>${tag(1)} ${esc(C.m[1].k)}</th><th>차이 (M2−M1)</th><th>변화율</th>`:''}</tr></thead><tbody>`;
+      c.data.datasets.forEach((d,k)=>{ if(!c.isDatasetVisible(k)) return; const v1=idx[0]>=0?d.data[idx[0]]:null, v2=two?d.data[idx[1]]:null;
+        const df=v1!=null&&v2!=null?v2-v1:null, pc=df!=null&&v1?df/Math.abs(v1)*100:null;
+        h+=`<tr><td><span class="sw" style="background:${d.borderColor}"></span>${esc(d.label)}</td><td>${f(v1)}</td>${two?`<td>${f(v2)}</td><td class="${sg(df)}">${df==null?'–':(df>0?'+':'')+fmt.format(df)}</td><td class="${sg(pc)}">${pc==null?'–':(pc>0?'+':'')+pc.toFixed(1)+'%'}</td>`:''}</tr>` });
+      bar.innerHTML=h+'</tbody></table>'+(two?'':'<div class="hint">Ctrl+클릭으로 비교선 M2를 놓으면 계열별 차이와 변화율을 계산합니다.</div>'); return }
+    const q=C.m.map(m=>C.px(m)); const rows=C.m.map((m,n)=>q[n]?`<tr><td>${tag(n)} ${esc(m.k)}</td><td>${f(q[n].r.x)}</td><td>${f(q[n].r.y)}</td></tr>`:'').join('');
+    let d=''; if(q[0]&&q[1]){ const dx=q[1].r.x-q[0].r.x, dy=q[1].r.y-q[0].r.y; d=`<tr><td><b>차이 (M2−M1)</b></td><td class="${sg(dx)}">${(dx>0?'+':'')+fmt.format(dx)}</td><td class="${sg(dy)}">${(dy>0?'+':'')+fmt.format(dy)}</td></tr><tr><td>기울기 ΔB/ΔA</td><td colspan="2">${dx?fmt.format(dy/dx):'–'}</td></tr>` }
+    const nm=C.names||['A','B']; bar.innerHTML=`<table><thead><tr><th>점</th><th title="${esc(nm[0])}">A</th><th title="${esc(nm[1])}">B</th></tr></thead><tbody>${rows}${d}</tbody></table>` };
+  C.reset=full=>{ C.view=null; C.m=[]; C.hover=null; C.drag=null; if(full) C.clearNotes(); bar.innerHTML='' };
+  C.after=c=>{ C.chart=c; if(c){ c.$ctl=C; if(C.view&&!xy){C.fitY(c);c.update('none')} } else C.notes.forEach(n=>n.el.style.display='none'); C.renderBar(); C.placeNotes() };
+  C.png=title=>{ const c=ch(); if(!c) return toast('저장할 그래프가 없습니다.',true); const dpr=c.currentDevicePixelRatio||1, W=c.canvas.width, H=c.canvas.height, top=Math.round(34*dpr);
+    const o=document.createElement('canvas'); o.width=W; o.height=H+top; const x=o.getContext('2d'); x.fillStyle=css('--surface')||'#fff'; x.fillRect(0,0,o.width,o.height);
+    x.fillStyle=css('--fg')||'#111'; x.font=`600 ${14*dpr}px ${css('--font')||'sans-serif'}`; x.fillText(title,10*dpr,22*dpr); x.drawImage(c.canvas,0,top);
+    C.notes.forEach(n=>{ if(!n.text||n.el.style.display==='none') return; const l=(parseFloat(n.el.style.left)+6)*dpr, t=parseFloat(n.el.style.top)*dpr+top;
+      x.font=`${12*dpr}px ${css('--font')||'sans-serif'}`; const L=n.text.split('\n'), w=Math.max(...L.map(s=>x.measureText(s).width))+12*dpr, h=(L.length*16+8)*dpr;
+      x.fillStyle='#fff8c4'; x.fillRect(l,t-h/2,w,h); x.strokeStyle='#d9b800'; x.lineWidth=dpr; x.strokeRect(l,t-h/2,w,h); x.fillStyle='#1a1400'; L.forEach((s,i)=>x.fillText(s,l+6*dpr,t-h/2+(16*(i+1)-2)*dpr)) });
+    o.toBlob(b=>{ if(!b) return; const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=(title||'chart').replace(/[\\/:*?"<>|]/g,'_').slice(0,90)+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000) }); toast('PNG로 저장했습니다.') };
+  // 이벤트
+  cv.addEventListener('mousedown',e=>{ if(e.button!==0||!ch()) return; const p=P(e); if(!inA(p)) return; e.preventDefault(); C.drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y,moved:false} });
+  window.addEventListener('mousemove',e=>{ const c=ch(); if(!c) return; const p=P(e);
+    if(C.drag){ C.drag.x1=p.x; C.drag.y1=p.y; if(Math.abs(p.x-C.drag.x0)+Math.abs(p.y-C.drag.y0)>6) C.drag.moved=true; c.draw(); return }
+    const h=e.target===cv&&inA(p)?C.snap(p):null; const k=h?h.k+'|'+h.ds:null; if(k!==C._hk){ C._hk=k; C.hover=h; c.draw() } });
+  window.addEventListener('mouseup',e=>{ const d=C.drag; if(!d||e.button!==0) return; C.drag=null; const c=ch(); if(!c) return;
+    if(d.moved){ C.zoomPx(d); return }
+    const p={x:d.x0,y:d.y0}, add=e.ctrlKey||e.metaKey;
+    const t=setTimeout(()=>{ C._clk=C._clk.filter(z=>z!==t); const h=C.snap(p); if(!h) return; if(add&&C.m.length) C.m[1]=h; else C.m=[h]; C.renderBar(); c.draw() },230); C._clk.push(t); c.draw() });
+  cv.addEventListener('dblclick',e=>{ C._clk.forEach(clearTimeout); C._clk=[]; if(!ch()) return; const p=P(e); if(inA(p)) C.addNote(p) });
+  cv.addEventListener('contextmenu',e=>{ if(e.ctrlKey||e.metaKey){ e.preventDefault(); C.resetView() } });
+  cv.addEventListener('wheel',e=>{ if(!(e.ctrlKey||e.metaKey)||!ch()) return; const p=P(e); if(!inA(p)) return; e.preventDefault(); C.wheel(p,e.deltaY<0) },{passive:false});
+  cv.addEventListener('mouseleave',()=>{ if(!C.drag&&C.hover){C.hover=null;C._hk=null;ch()&&ch().draw()} });
+  return C;
+}
+if(window.Chart) Chart.register({id:'taasCtl',afterDraw(c){ if(c.$ctl) c.$ctl.paint(c) }});
+const CTL={main:makeCtl('chart',false), sc:makeCtl('scatter',true), tr:makeCtl('trend',false,'#tbar'),
+  mTrend:makeCtl('cvTrend',false,'#mbTrend'), mLag:makeCtl('cvLag',false,'#mbLag'), mOls:makeCtl('cvOls',false,'#mbOls'), mPcaS:makeCtl('cvPcaS',false,'#mbPcaS'), mPcaL:makeCtl('cvPcaL',true,'#mbPcaL'), mIts:makeCtl('cvIts',false,'#mbIts')};
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape'||/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||'')||document.activeElement?.isContentEditable) return;
+  for(const C of Object.values(CTL)) if(C.m.length){ C.m=[]; C.renderBar(); C.chart&&C.chart.draw() } });
+document.querySelectorAll('.ctools').forEach(t=>t.addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const C=CTL[t.dataset.for];
+  if(b.dataset.act==='reset') C.resetView();
+  else if(b.dataset.act==='clear'){ C.m=[]; C.clearNotes(); C.renderBar(); C.chart&&C.chart.draw() }
+  else if(b.dataset.act==='png') C.png(t.dataset.for==='main'?`${$('#pTitle').textContent} — ${$('#chartTitle').textContent}`:t.dataset.for==='tr'?$('#trTitle').textContent:t.dataset.for==='sc'?`산점도 — ${(C.names||[]).join(' / ')}`:(t.closest('.card').querySelector('h3')||{}).textContent||'chart') }));
+
+/* ---------- 왼쪽 목록: 숨기기/보이기 · 너비 조절 ---------- */
+(()=>{ const main=document.querySelector('.main'), btn=$('#btnSide'), rz=$('#resizer');
+  const setW=w=>{ w=Math.max(200,Math.min(Math.round(w),Math.max(240,Math.min(760,innerWidth-380)))); main.style.setProperty('--side',w+'px'); return w };
+  function toggle(hide){ main.classList.toggle('collapsed',hide); btn.textContent=hide?'»':'«'; btn.title=hide?'목록 보이기':'목록 숨기기'; btn.setAttribute('aria-label',btn.title); btn.setAttribute('aria-expanded',String(!hide)); try{localStorage.setItem('taas.sideHidden',hide?'1':'0')}catch(e){} }
+  try{ const w=+localStorage.getItem('taas.side'); if(w) setW(w); if(localStorage.getItem('taas.sideHidden')==='1') toggle(true) }catch(e){}
+  btn.onclick=()=>toggle(!main.classList.contains('collapsed'));
+  rz.addEventListener('pointerdown',e=>{ e.preventDefault(); rz.classList.add('on'); rz.setPointerCapture(e.pointerId); const x0=e.clientX, w0=$('#side').getBoundingClientRect().width; let w=w0;
+    const mv=ev=>{w=setW(w0+ev.clientX-x0)}; const up=()=>{ rz.classList.remove('on'); rz.removeEventListener('pointermove',mv); rz.removeEventListener('pointerup',up); try{localStorage.setItem('taas.side',String(w))}catch(e){} };
+    rz.addEventListener('pointermove',mv); rz.addEventListener('pointerup',up) });
+  rz.ondblclick=()=>{ setW(300); try{localStorage.removeItem('taas.side')}catch(e){} };
+})();
+
+/* ---------- 탭/이벤트 ---------- */
+function showTab(v){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v));
+  ['explore','corr','stat','tech'].forEach(k=>$('#v-'+k).hidden=k!==v); if(v==='corr') renderCorr(); if(v==='stat') renderMethods()}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.v));
+$('#q').oninput=renderTree;
+/* 조건 변경: '자동 적용'이면 바로 다시 계산, 아니면 '분석 실행'을 누를 때까지 대기 */
+function setPending(on){const b=$('#btnRun'); b.classList.toggle('pending',on); b.textContent=on?'변경 사항 적용 ●':'분석 실행'}
+function changed(){ if(!S.P) return; if($('#autoRun').checked) update(); else setPending(true) }
+let _yt=null; const yearChanged=()=>{clearTimeout(_yt);_yt=setTimeout(changed,350)};
+$('#selMeasure').onchange=changed;
+['#y0','#y1'].forEach(s=>{$(s).oninput=yearChanged;$(s).onchange=changed});
+$('#selKind').onchange=()=>{S.st.kind=$('#selKind').value;changed()};
+$('#selNorm').onchange=()=>{S.st.norm=$('#selNorm').value;changed()};
+// 축을 바꿀 때: 이전 축은 합계(없으면 모두/첫 값)로 되돌리고, 새 축은 '모두' 상태를 풀고 값 전체를 선택
+const releaseAxis=(P,st,i)=>{const t=P.dicts[i].findIndex(z=>TOTALS.has(z)); if(t>=0){st.pick[i]=new Set([t]);st.all.delete(i)} else if(isMetric(P,i)){st.pick[i]=new Set([0]);st.all.delete(i)} else st.all.add(i)};
+$('#selX').onchange=()=>{const P=S.P,st=S.st,v=$('#selX').value;const nx=v==='year'?'year':+v;
+  if(typeof st.x==='number'&&st.x!==nx) releaseAxis(P,st,st.x);
+  st.x=nx; if(st.s===nx) st.s=null;
+  if(typeof nx==='number'){st.all.delete(nx); st.pick[nx]=new Set(P.dicts[nx].map((z,j)=>j).filter(j=>!TOTALS.has(P.dicts[nx][j])))}
+  CTL.main.reset(false); fixHier(P,st); buildControls(); changed()};
+$('#selS').onchange=()=>{const P=S.P,st=S.st,v=$('#selS').value;const ns=v===''?null:(v==='year'?'year':+v);
+  if(typeof st.s==='number'&&st.s!==ns) releaseAxis(P,st,st.s);
+  st.s=ns; if(typeof ns==='number'){st.all.delete(ns); const d=P.dicts[ns], all=d.map((z,j)=>j).filter(j=>!TOTALS.has(d[j])); st.pick[ns]=new Set(all.length<=12?all:all.slice(0,8))}
+  CTL.main.hidden.clear(); fixHier(P,st); buildControls(); changed()};
+$('#btnRun').onclick=()=>{ if(S.P) update() };
+try{ const a=localStorage.getItem('taas.autoRun'); if(a!==null) $('#autoRun').checked=a==='1' }catch(e){}
+$('#autoRun').onchange=()=>{ try{localStorage.setItem('taas.autoRun',$('#autoRun').checked?'1':'0')}catch(e){} if($('#autoRun').checked&&$('#btnRun').classList.contains('pending')) update() };
+$('#btnCopy').onclick=async()=>{const t=tableTSV();try{await navigator.clipboard.writeText(t);toast('표를 복사했습니다. 엑셀에 붙여넣을 수 있습니다.')}catch(e){const r=document.createRange();r.selectNodeContents($('#tbl'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('표를 선택했습니다. Ctrl+C로 복사하세요.')}};
+$('#btnAddCorr').onclick=addCurrentToCorr;
+$('#btnClearCorr').onclick=()=>{S.corr=[];S.sets=[];S.rateDen='';renderCorr()};
+['#cMethod','#cDiff','#cLag','#cAxis','#tNorm','#cY0','#cY1'].forEach(s=>$(s).onchange=renderCorr); $('#cLag').oninput=renderCorr;
+$('#cRate').onchange=()=>{S.rateDen=$('#cRate').value; S.sel=[0,1]; renderCorr()};
+$('#btnMulti').onclick=()=>runMulti();
+$('#btnStatGo').onclick=()=>runMulti(true);
+$('#btnToStat').onclick=()=>showTab('stat');
+$('#sGather').onclick=()=>runMulti(true);
+$('#sGoCorr').onclick=()=>showTab('corr');
+document.querySelectorAll('#stabs button').forEach(b=>b.onclick=()=>{S.mtab=b.dataset.m;renderMethods()});
+['#sY0','#sY1'].forEach(x=>$(x).onchange=renderMethods);
+['#tMode','#tSeries','#gX','#gY','#gMode','#gLag','#gAll','#oY','#oMode','#oTrend','#oDummy','#pMode','#pK','#iYear','#iMode','#iSeries','#rFilter'].forEach(x=>$(x).onchange=renderMethods);
+document.querySelectorAll('.presets [data-y]').forEach(b=>b.onclick=()=>{$('#iYear').value=b.dataset.y;renderMethods()});
+document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addResults(b.dataset.add));
+document.querySelectorAll('[data-csv]').forEach(b=>b.onclick=()=>saveCur(b.dataset.csv));
+$('#rCsv').onclick=()=>{const f=$('#rFilter').value,rows=S.results.filter(r=>!f||r.기법===f); if(!rows.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_결과모음${f?'_'+f:''}_${stamp()}.csv`,toCSV(rows),'text/csv;charset=utf-8'); toast('CSV로 저장했습니다.')};
+$('#rJson').onclick=()=>{ if(!S.results.length) return toast('저장할 결과가 없습니다.',true); saveFile(`TAAS_통계기법_결과모음_${stamp()}.json`,JSON.stringify({columns:RCOLS,saved:new Date().toISOString(),rows:S.results},null,1),'application/json'); toast('JSON으로 저장했습니다.')};
+$('#rClear').onclick=()=>{ if(!S.results.length) return; S.results=[]; saveResults(); renderMethods(); toast('결과 모음을 비웠습니다.')};
+$('#btnCkClear').onclick=()=>{S.checked.clear(); saveChecked(); renderTree()};
+$('#btnOpen').onclick=()=>$('#pickDir').click();
+$('#btnOpenFiles').onclick=()=>$('#pickFiles').click();
+$('#pickDir').onchange=e=>openFiles(e.target.files);
+$('#pickFiles').onchange=e=>openFiles(e.target.files);
+let dropEl=null;
+addEventListener('dragover',e=>{e.preventDefault();if(!dropEl){dropEl=document.createElement('div');dropEl.className='drop';dropEl.textContent='라이브러리 파일을 놓으세요 (index.json + panel/*.json.gz)';document.body.appendChild(dropEl)}});
+addEventListener('dragleave',e=>{if(e.target===dropEl){dropEl.remove();dropEl=null}});
+addEventListener('drop',e=>{e.preventDefault();if(dropEl){dropEl.remove();dropEl=null}openFiles(e.dataTransfer.files)});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{update();if(!$('#v-corr').hidden)renderCorr()});
+
+window.TAAS_DEBUG=()=>({S,ST,yearPool,grid}); // 검증·자동화용
+/* ---------- 시작: 라이브러리 폴더 안이면 바로, 아니면 예시 데이터 ---------- */
+if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local'}
+else if(window.TAAS_SAMPLE){S.index=window.TAAS_SAMPLE.index;S.mode='sample'}
+renderStat();renderTree();renderTech();renderCorr();
+if(S.index){const f=S.index.patterns.find(p=>hasData(p.pid)&&p.pid===7019)||S.index.patterns.find(p=>hasData(p.pid));if(f)selectPattern(f.pid)}
+})();
+</script>

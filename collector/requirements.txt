@@ -1,0 +1,4 @@
+playwright>=1.40
+pandas>=2.0
+pyarrow>=14
+openpyxl>=3.1

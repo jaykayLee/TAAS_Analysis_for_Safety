@@ -1,0 +1,8 @@
+pandas>=2.0
+pyarrow>=14
+openpyxl>=3.1
+# 수집기·패널 시험용 (선택)
+playwright>=1.40
+# 통계 계산 검증용 (선택)
+statsmodels>=0.14
+pymannkendall>=1.4
