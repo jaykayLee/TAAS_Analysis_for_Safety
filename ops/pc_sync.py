@@ -29,7 +29,7 @@ def tidy_locks(since):
     moved = []
     for lk in (ROOT / ".git").rglob("*.lock"):
         try:
-            if lk.stat().st_mtime < since - 5:
+            if since and lk.stat().st_mtime < since - 5:
                 continue
             dst = ROOT / ".git" / f"stale-{lk.relative_to(ROOT / '.git').as_posix().replace('/', '_')}-{int(time.time())}"
             os.replace(lk, dst)
@@ -51,7 +51,7 @@ def main():
     git("fetch", "--quiet", "--no-auto-gc", "origin", f"{a.branch}:refs/remotes/origin/{a.branch}")
     new = git("rev-parse", f"origin/{a.branch}")
     if head == new:
-        print(json.dumps({"changed": 0, "version": new[:7], "message": "이미 최신입니다"}, ensure_ascii=False))
+        print(json.dumps({"changed": 0, "version": new[:7], "message": "이미 최신입니다", "stale_locks_moved": tidy_locks(0)}, ensure_ascii=False))
         return
     rows = [l.split("\t") for l in git("-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", head, new).splitlines() if l]
     plan = [{"status": r[0], "path": r[-1]} for r in rows]
@@ -84,6 +84,7 @@ def main():
         b = subprocess.run([sys.executable, "build.py", "--panel-only"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
                            env={**os.environ, "PYTHONIOENCODING": "utf-8"})
         res["build"] = "패널 다시 생성 완료" if b.returncode == 0 else ("패널 생성 실패: " + b.stdout[-300:] + b.stderr[-300:])
+    res["stale_locks_moved"] = locks + tidy_locks(t0)  # git status 등이 뒤늦게 남긴 잠금도 마지막에 한 번 더 정리
     res["seconds"] = round(time.time() - t0, 1)
     print(json.dumps(res, ensure_ascii=False, indent=1))
 
