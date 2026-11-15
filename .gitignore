@@ -14,3 +14,4 @@ collector/*.json.gz
 .DS_Store
 Thumbs.db
 ~$*
+.zip_commit.json

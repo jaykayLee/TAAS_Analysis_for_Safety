@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>TAAS 교통사고 분석 패널</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -178,6 +179,13 @@ table.grid td{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
 .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .toast{position:fixed;right:16px;bottom:16px;z-index:60;font-size:12.5px;color:var(--good);background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r);padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.15);max-width:min(460px,calc(100vw - 32px))}
 .toast:empty{display:none}
+.upd{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
+.upd .btn.pending{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.updinfo{font-size:11px;color:var(--muted);white-space:nowrap;line-height:1.3;text-align:right}
+.updinfo b{font-family:var(--mono);font-weight:500;color:var(--fg-2)}
+.updinfo .new{color:var(--crit);font-weight:600}
+.updinfo .ok{color:var(--good)}
+.updinfo .run{color:var(--sign);font-weight:600}
 .empty{padding:28px;text-align:center;color:var(--fg-2);border:1px dashed var(--line-strong);border-radius:var(--r);background:var(--surface)}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 .serieslist{display:flex;flex-direction:column;gap:6px}
@@ -220,6 +228,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
   <div class="spacer"></div>
   <input type="file" id="pickDir" webkitdirectory directory multiple hidden>
   <input type="file" id="pickFiles" accept=".json,.gz,.js" multiple hidden>
+  <div class="upd" id="upd" hidden><button class="btn" id="btnUpd" type="button" title="GitHub 최신 버전을 받아 라이브러리·패널을 다시 만듭니다">업데이트</button><div class="updinfo" id="updInfo" role="status"></div></div>
   <button class="btn primary" id="btnOpen" type="button" title="taas_library 폴더(안에 index.json·panel 폴더가 있는 폴더)를 고릅니다. raw 폴더가 아닙니다.">라이브러리 폴더 열기</button>
   <button class="btn" id="btnOpenFiles" type="button" title="폴더 선택이 안 될 때 index.json과 panel 폴더의 파일을 함께 선택">파일로 열기</button>
 </header>
@@ -390,6 +399,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
 /*__SAMPLE__*/
 </script>
 <script src="index.js" onerror="void 0"></script>
+<script src="build_info.js" onerror="void 0"></script>
 <script>
 (()=>{
 "use strict";
@@ -1355,7 +1365,53 @@ addEventListener('dragleave',e=>{if(e.target===dropEl){dropEl.remove();dropEl=nu
 addEventListener('drop',e=>{e.preventDefault();if(dropEl){dropEl.remove();dropEl=null}openFiles(e.dataTransfer.files)});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{update();if(!$('#v-corr').hidden)renderCorr()});
 
-window.TAAS_DEBUG=()=>({S,ST,yearPool,grid}); // 검증·자동화용
+
+/* ---------- 업데이트 버튼 ----------
+   serve.py 로 연 경우(http): 버튼 = git pull(또는 zip) + build.py 실행, 끝나면 새로 고침
+   panel.html 을 파일로 연 경우: GitHub 최신 커밋과 비교해 새 버전 알림만 (실행은 업데이트.bat / 패널_열기.bat) */
+const UPD={server:false,st:null,poll:null};
+const fmtT=s=>{ if(!s) return '–'; const d=new Date(s); return isNaN(d)?String(s):d.toLocaleString('sv-SE').slice(0,16) };
+function renderUpd(){
+  const st=UPD.st||{}, b=st.build&&st.build.built_at?st.build:window.TAAS_BUILD, box=$('#upd'), el=$('#updInfo'), btn=$('#btnUpd');
+  if(!b&&!UPD.server){ box.hidden=true; return } box.hidden=false;
+  const j=st.job||{}, run=j.state==='running';
+  btn.disabled=run; btn.textContent=run?'업데이트 중…':(st.behind?'업데이트 ●':'업데이트'); btn.classList.toggle('pending',!!st.behind&&!run);
+  const sha=b&&b.commit?b.commit.slice(0,7):'';
+  let l1=b?`업데이트 <b>${esc(fmtT(b.built_at))}</b>`:'아직 빌드 정보 없음';
+  let l2=b?`<span title="${esc((b.commit_msg||'')+' · 데이터 조립 '+fmtT(b.data_built_at))}">버전 ${sha?`<b>${sha}</b> (${esc(fmtT(b.commit_date).slice(0,10))})`:'로컬'}</span>`:'';
+  if(run) l2=`<span class="run">${esc(j.step||'진행 중')}</span>`;
+  else if(j.state==='error') l2=`<span class="new" title="${esc((j.log||[]).slice(-12).join('\n'))}">실패: ${esc(String(j.error||'').slice(0,60))}</span>`;
+  else if(st.remote&&st.remote.sha) l2+=st.behind?` · <span class="new" title="${esc(st.remote.message||'')}">새 버전 ${esc(fmtT(st.remote.date).slice(0,10))}</span>`:' · <span class="ok">최신</span>';
+  el.innerHTML=l1+'<br>'+l2;
+}
+async function updStatus(){
+  if(/^https?:$/.test(location.protocol)){
+    try{ const r=await fetch('api/status',{cache:'no-store'}); if(r.ok){ UPD.server=true; UPD.st=await r.json(); renderUpd(); return UPD.st } }catch(e){}
+  }
+  const b=window.TAAS_BUILD; if(!b){ renderUpd(); return null }
+  UPD.st={build:b};
+  try{ const r=await fetch(`https://api.github.com/repos/${b.repo}/commits/${b.branch||'main'}`,{headers:{Accept:'application/vnd.github+json'}});
+    if(r.ok){ const j=await r.json(); UPD.st.remote={sha:j.sha,date:j.commit.committer.date,message:j.commit.message.split('\n')[0]}; UPD.st.behind=!!b.commit&&j.sha!==b.commit } }catch(e){}
+  renderUpd(); return UPD.st;
+}
+async function runUpdate(){
+  if(!UPD.server){
+    const st=await updStatus();
+    if(st&&st.behind) toast('새 버전이 있습니다. 폴더의 "업데이트.bat"을 실행하거나, "패널_열기.bat"으로 패널을 열면 이 버튼으로 바로 업데이트됩니다.',true);
+    else toast(st&&st.remote?'이미 최신 버전입니다.':'GitHub에 연결하지 못했습니다. 인터넷 연결을 확인하세요.',!(st&&st.remote));
+    return;
+  }
+  try{ const r=await fetch('api/update',{method:'POST',headers:{'X-TAAS':'1'}}); const j=await r.json().catch(()=>({}));
+    if(!r.ok&&r.status!==409){ toast('업데이트를 시작하지 못했습니다: '+(j.error||r.status),true); return } }catch(e){ toast('서버에 연결하지 못했습니다. 패널_열기.bat 창이 켜져 있는지 확인하세요.',true); return }
+  toast('업데이트를 시작했습니다. 원본이 바뀌었으면 몇 분 걸립니다.');
+  clearInterval(UPD.poll); UPD.poll=setInterval(async()=>{ const st=await updStatus(); const j=st&&st.job||{};
+    if(j.state==='done'){ clearInterval(UPD.poll); if(j.changed){ toast('업데이트 완료 — 새 버전으로 다시 엽니다.'); setTimeout(()=>location.reload(),1200) } else toast('이미 최신 버전입니다 (패널만 다시 만들었습니다).') }
+    else if(j.state==='error'){ clearInterval(UPD.poll); toast('업데이트 실패: '+j.error,true) } },1500);
+}
+$('#btnUpd').onclick=runUpdate;
+updStatus(); setInterval(()=>{ if(!UPD.poll||!UPD.st||!UPD.st.job||UPD.st.job.state!=='running') updStatus() },10*60*1000);
+
+window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD}); // 검증·자동화용
 /* ---------- 시작: 라이브러리 폴더 안이면 바로, 아니면 예시 데이터 ---------- */
 if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local'}
 else if(window.TAAS_SAMPLE){S.index=window.TAAS_SAMPLE.index;S.mode='sample'}

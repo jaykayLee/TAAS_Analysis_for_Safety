@@ -19,12 +19,27 @@ library\panel.html         :: 더블클릭
 
 Windows 에서는 `빌드_실행.bat` 을 더블클릭해도 됩니다.
 
-## 업데이트 (git)
+## 패널 열기와 업데이트
+
+| 방법 | 업데이트 |
+|---|---|
+| **`패널_열기.bat`** (권장) — 로컬 서버(`serve.py`)로 `http://127.0.0.1:8765/panel.html` 을 엽니다 | 오른쪽 위 **[업데이트]** 버튼이 최신 버전을 받아 다시 빌드한 뒤 패널을 새로 고칩니다 |
+| `library\panel.html` 더블클릭 | 버튼은 새 버전 여부만 알려 줍니다 → `업데이트.bat` 실행 |
+
+버튼 아래에 **업데이트 시각**(이 PC에서 마지막으로 빌드한 때)과 **버전**(커밋·날짜, 최신 여부)이 표시됩니다. 새 버전이 있으면 버튼이 노란색으로 바뀝니다.
+
+업데이트가 하는 일:
+1. 내려받기 — 이 폴더가 git 저장소면 `git pull --ff-only`, 아니면 GitHub 최신본 zip 으로 덮어쓰기(공개 저장소일 때, 로컬 수정은 덮임)
+2. `python build.py` — 원본(`data/raw`)이 바뀌었으면 라이브러리 전체 조립(약 4분), 아니면 패널만(수 초)
+
+명령으로 직접 하려면:
 
 ```bat
 git pull
-python build.py            :: 원본이 바뀌었으면 전체 조립, 패널만 바뀌었으면 수 초 안에 끝남
+python build.py
 ```
+
+`library\build_info.json` 에 버전·빌드 시각이, `library\.build_manifest.json` 에 원본 해시가 남습니다.
 
 `build.py` 는 `library\.build_manifest.json` 에 원본 해시를 남겨, 원본(`data/raw`)이나 조립 스크립트가 바뀐 경우에만 데이터를 다시 만듭니다.
 `library\` 는 생성물이라 git 에 올리지 않습니다.
@@ -45,6 +60,7 @@ python build.py            :: 원본이 바뀌었으면 전체 조립, 패널만
 | 경로 | 내용 |
 |---|---|
 | `build.py`, `빌드_실행.bat` | 원본 → 라이브러리·패널 한 번에 만들기 |
+| `serve.py`, `패널_열기.bat`, `업데이트.bat` | 로컬 서버로 패널 열기(업데이트 버튼 동작) / 업데이트만 실행 |
 | `data/raw/taas/` | TAAS 수집 원본 (5년 단위 json.gz) |
 | `data/raw/population/` | 통계청 인구를 라이브러리 형식으로 바꾼 원본 (장표 9001·9002) |
 | `data/source/kosis/` | 통계청 KOSIS 원본 엑셀 (`python build.py --pop` 으로 인구 원본 재생성) |
