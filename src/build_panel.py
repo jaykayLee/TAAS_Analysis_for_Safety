@@ -23,12 +23,48 @@ def auto_config(tpl):
     return "window.TAAS_AUTO=" + json.dumps(cfg, ensure_ascii=False) + ";"
 
 
+def write_online_packs(lib, target=1_200_000):
+    """게시용 데이터 묶음: panel/p*.json.gz 를 약 1.2MB(gzip) 단위 묶음 online/pack_NN.json.gz 로 합침 → 게시 파일 수를 20개 안팎으로"""
+    out = lib / "online"
+    if out.exists():
+        for f in out.glob("pack_*.json.gz"):
+            f.unlink()
+    out.mkdir(exist_ok=True)
+    files = sorted((lib / "panel").glob("p*.json.gz"), key=lambda f: int(f.stem.split(".")[0][1:]))
+    where, cur, size, n = {}, {}, 0, 0
+
+    def flush():
+        nonlocal cur, size, n
+        if not cur:
+            return
+        name = f"pack_{n:02d}"
+        with gzip.open(out / f"{name}.json.gz", "wt", encoding="utf-8", compresslevel=6) as g:
+            json.dump(cur, g, ensure_ascii=False, separators=(",", ":"))
+        for pid in cur:
+            where[pid] = name
+        cur, size, n = {}, 0, n + 1
+
+    for f in files:
+        pid = f.stem.split(".")[0][1:]
+        cur[pid] = json.loads(gzip.open(f, "rt", encoding="utf-8").read())
+        size += f.stat().st_size
+        if size >= target:
+            flush()
+    flush()
+    (out / "packs.json").write_text(json.dumps(where, separators=(",", ":")), encoding="utf-8")
+    return n
+
+
 def main(lib, tpl, sample_out=None, online_out=None):
     lib = Path(lib); html = Path(tpl).read_text(encoding="utf-8")
     auto = auto_config(tpl)
     html = html.replace("/*__SAMPLE__*/", auto + "/*__SAMPLE__*/")
     (lib / "panel.html").write_text(html.replace("/*__SAMPLE__*/", ""), encoding="utf-8")
-    if online_out:  # claude.ai 게시용: index.json·panel/*.json.gz 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
+    if online_out:  # claude.ai 게시용: index.json·online/packs.json·online/pack_*.json.gz 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
+        man = lib / "online" / "packs.json"
+        newest = max(f.stat().st_mtime for f in (lib / "panel").glob("p*.json.gz"))
+        if not man.exists() or man.stat().st_mtime < newest:
+            write_online_packs(lib)
         Path(online_out).write_text(html.replace("/*__SAMPLE__*/", "window.TAAS_ONLINE=1;").replace('<script src="index.js" onerror="void 0"></script>', ""), encoding="utf-8")
     idx = json.loads((lib / "index.json").read_text(encoding="utf-8"))
     # 차량기술 카드 장표명 점검

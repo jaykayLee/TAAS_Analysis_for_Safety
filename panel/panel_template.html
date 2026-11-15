@@ -481,7 +481,8 @@ async function getPattern(pid){
   let obj=null;
   if(S.mode==='local'){obj=await loadScript(pid)}
   else if(S.mode==='sample'){obj=(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid])||null}
-  else if(S.mode==='online'){obj=await fetchGz(`panel/p${pid}.json.gz`)}
+  else if(S.mode==='online'){ if(!S.packs) S.packs=await fetch('online/packs.json',{cache:'no-store'}).then(r=>r.json()).catch(()=>({})); S.packP=S.packP||{};
+    const pk=S.packs[pid]; if(pk){ S.packP[pk]=S.packP[pk]||fetchGz(`online/${pk}.json.gz`); const pack=await S.packP[pk]; obj=pack&&pack[pid]?pack[pid]:null; if(!pack) delete S.packP[pk] } }
   else{const f=S.files.get(pid); if(f) obj=JSON.parse(await gunzipText(f))}
   if(obj){obj.n=obj.v.length; S.cache.set(pid,obj)}
   return obj;
