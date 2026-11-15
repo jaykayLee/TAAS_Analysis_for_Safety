@@ -16,3 +16,4 @@ Thumbs.db
 ~$*
 .zip_commit.json
 ops/_publish_*.json
+_to_delete/

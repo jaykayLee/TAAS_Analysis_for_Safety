@@ -3,6 +3,7 @@
 - 사용자와는 한국어로 대화합니다.
 - 이 저장소가 프로젝트의 정본입니다. 작업 브랜치 → 커밋 → push → PR → `main` 병합 순서로 올리고, `CHANGELOG.md` 에 한 줄 이상 남깁니다. 사용자 PC의 패널 [업데이트] 버튼은 `main` 을 받습니다.
 - 사용자 PC 산출물 위치: `C:\Users\USER\Desktop\Claude_Projects` (이 프로젝트: `TAAS Analysis`, 보조 산출물은 `TAAS Analysis\참고자료`). 다운로드 폴더에는 저장하지 않습니다.
+- PC 반영은 전체 zip 이 아니라 **바뀐 파일만**: `main` 병합 후 PC 연결 셸에서 `cd ~/mnt/Claude_Projects/TAAS_Analysis_for_Safety && python3 ops/pc_sync.py` (git fetch → 바뀐 파일 제자리 덮어쓰기 → 패널만 재생성). 원본 데이터가 바뀐 경우에만 라이브러리 전체를 따로 전달.
 - `library/` 는 생성물입니다. 커밋하지 말고 `python build.py` 로 만듭니다.
 
 ## 구조 요점
