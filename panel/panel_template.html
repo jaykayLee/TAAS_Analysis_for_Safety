@@ -100,6 +100,23 @@ aside.tree{background:var(--surface);display:flex;flex-direction:column;min-heig
 .sethead b{font-size:13px}
 .setctl{display:flex;flex-wrap:wrap;gap:8px 12px}
 .setctl select{max-width:220px}
+.dimfilters.hasrank .chips{max-width:560px}
+.rankbox{flex:1 1 260px;min-width:240px;max-width:600px;align-self:stretch;display:flex;flex-direction:column}
+.rankbox .head{display:flex;gap:6px 8px;align-items:center;justify-content:space-between;margin-bottom:2px;flex-wrap:wrap}
+.ranksub{font-size:12px;color:var(--fg-2);margin:2px 0 4px}
+.ranksub b{color:var(--fg)}
+.ranklist{list-style:none;margin:0;padding:0;max-height:168px;flex:1;overflow:auto;font-size:12px}
+.ranklist li{display:grid;grid-template-columns:30px minmax(56px,1fr) minmax(0,90px) auto;gap:8px;align-items:center;padding:2px 6px;border-radius:4px;cursor:pointer}
+.ranklist li:hover{background:var(--surface-2)}
+.ranklist .rk{font-family:var(--mono);color:var(--muted);text-align:right}
+.ranklist .v{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.ranklist .bar{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.ranklist .bar i{display:block;height:100%;background:var(--line-strong)}
+.ranklist li.on .nm{color:var(--fg);font-weight:600}
+.ranklist li.on .bar i{background:var(--sign)}
+.ranklist li.on .rk::before{content:'● ';color:var(--sign);font-size:9px}
+.ranklist li.kr{background:color-mix(in srgb,var(--amber) 22%,transparent)}
+.ranklist li.kr .nm{font-weight:700;color:var(--fg)}
 .subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
 .subtabs button{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--fg-2)}
 .subtabs button[aria-selected=true]{background:var(--sign);border-color:var(--sign);color:var(--sign-ink);font-weight:600}
@@ -579,7 +596,34 @@ function defaultState(P,m){
   const st={measure:mi, y0:P.years[0], y1:P.years[P.years.length-1], x, s, pick, all:new Set(), kind:'auto', norm:'raw'};
   // 합계 항목이 없는 차원은 첫 값이 아니라 전체 합산을 기본으로
   P.dicts.forEach((d,i)=>{ if(i!==x&&i!==s&&!d.some(v=>TOTALS.has(v))&&!isMetric(P,i)) st.all.add(i) });
-  fixHier(P,st); return st;
+  fixHier(P,st); applyNear(P,st); return st;
+}
+/* 국가 비교(OECD 장표 등): 계열 축에 '대한민국'이 있으면 기본 선택 = 대한민국 + 같은 지표 값이 가장 가까운 4개국 (규모가 비슷한 나라끼리 비교) */
+const NEAR_KEY='대한민국';
+function nearPick(P,st){
+  const i=st.s; if(typeof i!=='number') return null; const d=P.dicts[i], kj=d.indexOf(NEAR_KEY); if(kj<0) return null;
+  const st2={...st,x:'year',norm:'raw',pick:st.pick.map(x=>new Set(x)),all:new Set(st.all)};
+  st2.pick[i]=new Set(d.map((v,j)=>j).filter(j=>!TOTALS.has(d[j])));
+  const R=compute(P,st2), kr=R.series.find(z=>z.key===kj); if(!kr) return null;
+  let t=-1; for(let k=R.X.length-1;k>=0;k--) if(kr.vals[k]!=null){t=k;break} if(t<0) return null; // 대한민국 값이 있는 가장 최근 연도
+  return {kj, year:R.xlabels[t], kv:kr.vals[t], rows:R.series.map(z=>({j:z.key,label:z.label,v:z.vals[t]})).filter(r=>r.v!=null)};
+}
+function applyNear(P,st){
+  const n=nearPick(P,st); if(!n) return false;
+  const near=n.rows.filter(r=>r.j!==n.kj).sort((a,b)=>Math.abs(a.v-n.kv)-Math.abs(b.v-n.kv)).slice(0,4);
+  st.pick[st.s]=new Set([n.kj,...near.map(r=>r.j)]); st._near=true; return true;
+}
+function metricLabel(P,st){ for(let i=0;i<P.dim_names.length;i++){ if(i===st.s||i===st.x||!isMetric(P,i)) continue; const v=P.dicts[i][[...st.pick[i]][0]]; if(v) return v } return P.measures[st.measure] }
+function renderRank(){
+  const el=$('#rankbox'); if(!el||!S.P) return; const P=S.P, st=S.st, n=nearPick(P,st);
+  if(!n){ el.hidden=true; return } el.hidden=false;
+  const rows=[...n.rows].sort((a,b)=>b.v-a.v), kr=rows.findIndex(r=>r.j===n.kj)+1, max=Math.max(...rows.map(r=>Math.abs(r.v)))||1, pk=st.pick[st.s];
+  el.innerHTML=`<div class="head"><span class="lbl">국가별 순위 · <b>${esc(metricLabel(P,st))}</b> · ${esc(n.year)}년</span><button class="btn small" type="button" data-a="near" title="대한민국 + 값이 가장 가까운 4개국을 다시 선택">대한민국 근접 5개국</button></div>
+    <div class="ranksub">대한민국 <b>${kr}위</b> / ${rows.length}개국 · ${fmt.format(n.kv)}${st._near?' · 그래프: 대한민국과 가장 가까운 4개국':''}</div>
+    <ol class="ranklist">${rows.map((r,k)=>`<li data-j="${r.j}" class="${r.j===n.kj?'kr ':''}${pk.has(r.j)?'on':''}" title="눌러서 그래프에 넣기/빼기"><span class="rk">${k+1}</span><span class="nm">${esc(r.label)}</span><span class="bar"><i style="width:${(Math.abs(r.v)/max*100).toFixed(1)}%"></i></span><span class="v">${fmt.format(r.v)}</span></li>`).join('')}</ol>`;
+  el.querySelectorAll('li').forEach(li=>li.onclick=()=>{ const j=+li.dataset.j; pk.has(j)?pk.delete(j):pk.add(j); st._near=false; buildDims(); changed() });
+  el.querySelector('[data-a=near]').onclick=()=>{ applyNear(P,st); buildDims(); changed() };
+  const krow=el.querySelector('li.kr'); if(krow) krow.scrollIntoView({block:'nearest'});
 }
 async function selectPattern(pid,preset){
   S.pid=pid; renderTree(); CTL.main.reset(true); CTL.main.hidden.clear();
@@ -632,17 +676,20 @@ function buildDims(){
       el.innerHTML=`<div class="head"><span class="lbl">${st.x===i?'가로축':'계열'} · <b>${esc(name)}</b></span><span><button class="btn small" data-a="all">전체</button> <button class="btn small" data-a="none">해제</button></span></div><div class="chips"></div>`;
       const chips=el.querySelector('.chips');
       d.forEach((v,j)=>{const c=document.createElement('button');c.type='button';c.className='chip'+(TOTALS.has(v)?' total':'');c.textContent=v||'(빈값)';c.setAttribute('aria-pressed',st.pick[i].has(j));
-        c.onclick=()=>{st.pick[i].has(j)?st.pick[i].delete(j):st.pick[i].add(j);c.setAttribute('aria-pressed',st.pick[i].has(j));changed()};chips.appendChild(c)});
-      el.querySelector('[data-a=all]').onclick=()=>{st.pick[i]=new Set(d.map((v,j)=>j).filter(j=>!TOTALS.has(d[j])));buildDims();changed()};
-      el.querySelector('[data-a=none]').onclick=()=>{st.pick[i]=new Set();buildDims();changed()};
+        c.onclick=()=>{st.pick[i].has(j)?st.pick[i].delete(j):st.pick[i].add(j);c.setAttribute('aria-pressed',st.pick[i].has(j));st._near=false;changed()};chips.appendChild(c)});
+      el.querySelector('[data-a=all]').onclick=()=>{st.pick[i]=new Set(d.map((v,j)=>j).filter(j=>!TOTALS.has(d[j])));st._near=false;buildDims();changed()};
+      el.querySelector('[data-a=none]').onclick=()=>{st.pick[i]=new Set();st._near=false;buildDims();changed()};
     }else{
       const id='dsel'+i, met=isMetric(P,i); if(met) st.all.delete(i);
       el.innerHTML=`<div class="field"><label for="${id}">${esc(name)}${met?' <span title="값마다 단위가 달라 합산하지 않는 지표 축">(지표)</span>':''}</label><select id="${id}">${met?'':'<option value="-1">(모두 · 가로축에 표시)</option>'}${d.map((v,j)=>`<option value="${j}">${esc(v||'(빈값)')}</option>`).join('')}</select></div>`;
       const sel=el.querySelector('select'); sel.value=st.all.has(i)?-1:([...st.pick[i]][0]??0);
-      sel.onchange=()=>{const v=+sel.value; if(v<0){st.all.add(i)}else{st.all.delete(i);st.pick[i]=new Set([v])} changed()};
+      sel.onchange=()=>{const v=+sel.value; if(v<0){st.all.add(i)}else{st.all.delete(i);st.pick[i]=new Set([v])}
+        if(st._near){ applyNear(P,st); buildDims() } changed()}; // 지표를 바꾸면 그 지표 기준으로 근접 국가를 다시 고름
     }
     box.appendChild(el);
   });
+  box.classList.toggle('hasrank',typeof st.s==='number'&&P.dicts[st.s].includes(NEAR_KEY));
+  if(typeof st.s==='number'&&P.dicts[st.s].includes(NEAR_KEY)){ const rb=document.createElement('div'); rb.className='dimbox rankbox'; rb.id='rankbox'; box.appendChild(rb); renderRank() }
 }
 function axisLabel(P,ax,k){return ax==='year'?String(P.years[k]):(P.dicts[ax][k]||'(빈값)')}
 function compute(P=S.P, st=S.st){
@@ -691,7 +738,7 @@ function update(){
   const kind=st.kind==='auto'?(st.x==='year'?'line':'bar'):st.kind;
   const unit=P.measures[st.measure]; const nrm={raw:'',share:' · 비중(%)',index:' · 지수',yoy:' · 전년비(%)'}[st.norm];
   $('#chartTitle').textContent=`${unit}${nrm} — ${st.x==='year'?'연도별':P.dim_names[st.x]+'별'}${st.s!==null?' × '+(st.s==='year'?'연도':P.dim_names[st.s]):''}`;
-  drawChart(R,kind); drawTable(R);
+  drawChart(R,kind); drawTable(R); renderRank();
 }
 const MAXS=30;
 function drawChart(R,kind){
@@ -1367,7 +1414,7 @@ $('#q').oninput=renderTree;
 function setPending(on){const b=$('#btnRun'); b.classList.toggle('pending',on); b.textContent=on?'변경 사항 적용 ●':'분석 실행'}
 function changed(){ if(!S.P) return; if($('#autoRun').checked) update(); else setPending(true) }
 let _yt=null; const yearChanged=()=>{clearTimeout(_yt);_yt=setTimeout(changed,350)};
-$('#selMeasure').onchange=changed;
+$('#selMeasure').onchange=()=>{ const st=S.st; if(st&&st._near){ st.measure=+$('#selMeasure').value; applyNear(S.P,st); buildDims() } changed() };
 ['#y0','#y1'].forEach(s=>{$(s).oninput=yearChanged;$(s).onchange=changed});
 $('#selKind').onchange=()=>{S.st.kind=$('#selKind').value;changed()};
 $('#selNorm').onchange=()=>{S.st.norm=$('#selNorm').value;changed()};
@@ -1381,6 +1428,7 @@ $('#selX').onchange=()=>{const P=S.P,st=S.st,v=$('#selX').value;const nx=v==='ye
 $('#selS').onchange=()=>{const P=S.P,st=S.st,v=$('#selS').value;const ns=v===''?null:(v==='year'?'year':+v);
   if(typeof st.s==='number'&&st.s!==ns) releaseAxis(P,st,st.s);
   st.s=ns; if(typeof ns==='number'){st.all.delete(ns); const d=P.dicts[ns], all=d.map((z,j)=>j).filter(j=>!TOTALS.has(d[j])); st.pick[ns]=new Set(all.length<=12?all:all.slice(0,8))}
+  if(typeof ns==='number'&&P.dicts[ns].includes(NEAR_KEY)) applyNear(P,st);
   CTL.main.hidden.clear(); fixHier(P,st); buildControls(); changed()};
 $('#btnRun').onclick=()=>{ if(S.P) update() };
 try{ const a=localStorage.getItem('taas.autoRun'); if(a!==null) $('#autoRun').checked=a==='1' }catch(e){}
