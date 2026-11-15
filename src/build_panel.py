@@ -4,7 +4,7 @@ usage: python build_panel.py <library_dir> <template.html> [sample_out.html]
  - <library_dir>/panel.html : 라이브러리 폴더에서 더블클릭으로 여는 패널 (index.js, panel_js/ 사용)
  - sample_out.html          : 예시 장표를 내장한 단독 패널 (아티팩트 게시용)
 """
-import gzip, json, re, sys
+import base64, gzip, json, re, sys
 from pathlib import Path
 
 SAMPLE_PIDS = [7019, 7300, 1, 9001, 9002, 7196, 7240, 7092, 7066, 7051, 7160, 7110, 7097, 7089, 7269, 7210, 7030, 7086, 4]
@@ -24,10 +24,10 @@ def auto_config(tpl):
 
 
 def write_online_packs(lib, target=1_200_000):
-    """게시용 데이터 묶음: panel/p*.json.gz 를 약 1.2MB(gzip) 단위 묶음 online/pack_NN.json.gz 로 합침 → 게시 파일 수를 20개 안팎으로"""
+    """게시용 데이터 묶음: panel/p*.json.gz 를 약 1.2MB(gzip) 단위 묶음 online/pack_NN.txt(gzip→base64)로 합침 → 게시 파일 수를 20개 안팎으로"""
     out = lib / "online"
     if out.exists():
-        for f in out.glob("pack_*.json.gz"):
+        for f in list(out.glob("pack_*.json.gz")) + list(out.glob("pack_*.txt")):
             f.unlink()
     out.mkdir(exist_ok=True)
     files = sorted((lib / "panel").glob("p*.json.gz"), key=lambda f: int(f.stem.split(".")[0][1:]))
@@ -38,8 +38,9 @@ def write_online_packs(lib, target=1_200_000):
         if not cur:
             return
         name = f"pack_{n:02d}"
-        with gzip.open(out / f"{name}.json.gz", "wt", encoding="utf-8", compresslevel=6) as g:
-            json.dump(cur, g, ensure_ascii=False, separators=(",", ":"))
+        # 아티팩트는 .gz 를 서비스하지 않으므로 gzip 을 base64 텍스트(.txt)로 게시 — 패널이 받아 풂
+        raw = gzip.compress(json.dumps(cur, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), compresslevel=6)
+        (out / f"{name}.txt").write_bytes(base64.b64encode(raw))
         for pid in cur:
             where[pid] = name
         cur, size, n = {}, 0, n + 1
@@ -60,7 +61,7 @@ def main(lib, tpl, sample_out=None, online_out=None):
     auto = auto_config(tpl)
     html = html.replace("/*__SAMPLE__*/", auto + "/*__SAMPLE__*/")
     (lib / "panel.html").write_text(html.replace("/*__SAMPLE__*/", ""), encoding="utf-8")
-    if online_out:  # claude.ai 게시용: index.json·online/packs.json·online/pack_*.json.gz 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
+    if online_out:  # claude.ai 게시용: index.json·online/packs.json·online/pack_*.txt 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
         man = lib / "online" / "packs.json"
         newest = max(f.stat().st_mtime for f in (lib / "panel").glob("p*.json.gz"))
         if not man.exists() or man.stat().st_mtime < newest:

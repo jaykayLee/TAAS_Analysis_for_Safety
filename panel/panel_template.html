@@ -482,14 +482,16 @@ async function getPattern(pid){
   if(S.mode==='local'){obj=await loadScript(pid)}
   else if(S.mode==='sample'){obj=(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid])||null}
   else if(S.mode==='online'){ if(!S.packs) S.packs=await fetch('online/packs.json',{cache:'no-store'}).then(r=>r.json()).catch(()=>({})); S.packP=S.packP||{};
-    const pk=S.packs[pid]; if(pk){ S.packP[pk]=S.packP[pk]||fetchGz(`online/${pk}.json.gz`); const pack=await S.packP[pk]; obj=pack&&pack[pid]?pack[pid]:null; if(!pack) delete S.packP[pk] } }
+    const pk=S.packs[pid]; if(pk){ S.packP[pk]=S.packP[pk]||fetchGz(`online/${pk}.txt`); const pack=await S.packP[pk]; obj=pack&&pack[pid]?pack[pid]:null; if(!pack) delete S.packP[pk] } }
   else{const f=S.files.get(pid); if(f) obj=JSON.parse(await gunzipText(f))}
   if(obj){obj.n=obj.v.length; S.cache.set(pid,obj)}
   return obj;
 }
 async function fetchGz(url){ // 게시된 패널: 장표 파일을 열 때 받아 풂 (서버가 이미 풀어 보내면 그대로)
   try{ const r=await fetch(url,{cache:'force-cache'}); if(!r.ok) return null; const buf=await r.arrayBuffer(); const u=new Uint8Array(buf);
-    const txt=(u[0]===0x1f&&u[1]===0x8b)?await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text():new TextDecoder().decode(u);
+    let gz=(u[0]===0x1f&&u[1]===0x8b)?u:null, txt=null;
+    if(!gz){ txt=new TextDecoder().decode(u); if(txt.startsWith('H4sI')){ const bin=atob(txt.trim()); gz=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) gz[i]=bin.charCodeAt(i) } } // 게시판: gzip→base64 텍스트
+    if(gz) txt=await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
     return JSON.parse(txt) }catch(e){ console.error(e); return null } }
 function meta(pid){return S.index.patterns.find(p=>p.pid===pid)}
 function hasData(pid){

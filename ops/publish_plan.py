@@ -24,8 +24,8 @@ def main():
     for name in ["index.json", "build_info.js", "build_info.json"]:
         files[name] = f"library/{name}"
     files["online/packs.json"] = "library/online/packs.json"
-    for p in sorted((LIB / "online").glob("pack_*.json.gz")):
-        files[f"online/{p.name}"] = {"from": f"library/online/{p.name}", "contentType": "application/gzip"}
+    for p in sorted((LIB / "online").glob("pack_*.txt")):
+        files[f"online/{p.name}"] = f"library/online/{p.name}"  # gzip→base64 텍스트 (아티팩트는 .gz 를 서비스하지 않음)
     items = list(files.items())
     out = []
     for i in range(0, len(items), PER):
