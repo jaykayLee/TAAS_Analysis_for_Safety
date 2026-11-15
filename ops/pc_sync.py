@@ -24,6 +24,21 @@ def git(*a, binary=False):
     return r.stdout if binary else r.stdout.decode("utf-8", "replace").strip()
 
 
+def tidy_locks(since):
+    """삭제가 막힌 폴더에서는 git 이 자기 잠금 파일(.lock)을 못 지워 남김 → .git 바로 아래 stale-* 로 옮겨 다음 git 명령이 막히지 않게 함"""
+    moved = []
+    for lk in (ROOT / ".git").rglob("*.lock"):
+        try:
+            if lk.stat().st_mtime < since - 5:
+                continue
+            dst = ROOT / ".git" / f"stale-{lk.relative_to(ROOT / '.git').as_posix().replace('/', '_')}-{int(time.time())}"
+            os.replace(lk, dst)
+            moved.append(lk.name)
+        except OSError:
+            pass
+    return moved
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -31,7 +46,9 @@ def main():
     a = ap.parse_args()
     t0 = time.time()
     head = git("rev-parse", "HEAD")
-    git("fetch", "--quiet", "origin", f"{a.branch}:refs/remotes/origin/{a.branch}")
+    for k, v in (("gc.auto", "0"), ("maintenance.auto", "false"), ("core.filemode", "false")):  # 정리 작업이 파일 삭제를 시도하지 않게
+        subprocess.run(G + ["config", k, v], cwd=ROOT, capture_output=True)
+    git("fetch", "--quiet", "--no-auto-gc", "origin", f"{a.branch}:refs/remotes/origin/{a.branch}")
     new = git("rev-parse", f"origin/{a.branch}")
     if head == new:
         print(json.dumps({"changed": 0, "version": new[:7], "message": "이미 최신입니다"}, ensure_ascii=False))
@@ -57,9 +74,10 @@ def main():
         with open(dst, "wb") as f:  # 제자리 덮어쓰기 (삭제 권한 불필요)
             f.write(blob)
     git("reset", "--quiet", "--mixed", new)  # HEAD·기록만 새 버전으로 (작업 파일은 위에서 이미 맞춤)
+    locks = tidy_locks(t0)
     dirty = git("status", "--porcelain", "--untracked-files=no")
     res = {"from": head[:7], "to": new[:7], "changed": len(plan), "files": [p["path"] for p in plan], "moved_to__to_delete": moved,
-           "git_clean": not dirty, "data_changed": data_changed}
+           "git_clean": not dirty, "data_changed": data_changed, "stale_locks_moved": locks}
     if data_changed:
         res["next"] = "원본 데이터가 바뀌었습니다 — python build.py (전체 조립, pandas·pyarrow 필요)"
     else:
