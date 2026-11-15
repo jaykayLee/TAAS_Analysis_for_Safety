@@ -1,12 +1,12 @@
 """
-패널 아티팩트 게시 계획 — 온라인 패널(library/panel_online.html)과 데이터 파일을 Artifact 도구 한도(한 번에 255개)에 맞게 나눔
+패널 아티팩트 게시 계획 — 온라인 패널(library/panel_online.html)과 데이터 묶음(library/online/)을 Artifact 도구 한도(한 번에 255개)에 맞게 나눔
 
     python ops/publish_plan.py      → ops/_publish_1.json, ops/_publish_2.json … (각각 Artifact 도구의 files 값)
 
 게시 순서 (ops/AUTO_UPDATE.md 4단계):
   1) Artifact read  url=<artifact_url>
   2) Artifact publish url=<artifact_url> file_path=library/panel_online.html files=<_publish_1.json 내용>   (capabilities 는 넘기지 않음)
-  3) Artifact publish url=<artifact_url> file_path=library/panel_online.html files=<_publish_2.json 내용>   (같은 페이지, 나머지 파일 추가)
+  (묶음이 240개를 넘으면 _publish_2.json 으로 한 번 더 — 보통은 한 번으로 끝남)
 파일 경로는 저장소 최상위 기준입니다. 이전 게시에 있던 파일은 그대로 남고 같은 경로는 교체됩니다.
 """
 import json
@@ -23,8 +23,9 @@ def main():
     files = {}
     for name in ["index.json", "build_info.js", "build_info.json"]:
         files[name] = f"library/{name}"
-    for p in sorted((LIB / "panel").glob("p*.json.gz")):
-        files[f"panel/{p.name}"] = {"from": f"library/panel/{p.name}", "contentType": "application/gzip"}
+    files["online/packs.json"] = "library/online/packs.json"
+    for p in sorted((LIB / "online").glob("pack_*.json.gz")):
+        files[f"online/{p.name}"] = {"from": f"library/online/{p.name}", "contentType": "application/gzip"}
     items = list(files.items())
     out = []
     for i in range(0, len(items), PER):

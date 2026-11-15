@@ -67,7 +67,7 @@ TAAS·KOSIS 사이트는 클라우드에서 접속되지 않습니다. **사용�
 5. 저장소 반영: 브랜치 `claude/auto-<YYYYMMDD-HHMM>` 커밋 → `git -c push.negotiate=true push -u origin <브랜치>` → REST 로 PR 생성(`gh api repos/jaykayLee/TAAS_Analysis_for_Safety/pulls -f head=… -f base=main …`) → 병합(`gh api -X PUT …/pulls/<번호>/merge -f merge_method=merge`). 병합이 막히면 PR 을 열어 둔 채 message 에 PR 주소를 남깁니다.
 6. 패널 재게시: 상태 `status=publish`. `python build.py` 를 한 번 더 실행해 `library/build_info.*` 에 병합 커밋을 넣은 뒤 `python ops/publish_plan.py`.
    - `Artifact` 도구로 `artifact_url` 을 먼저 `read` 합니다.
-   - `publish`(url=`artifact_url`, file_path=`library/panel_online.html`, files=`ops/_publish_1.json` 내용) → 이어서 `_publish_2.json` 으로 한 번 더(같은 file_path).
+   - `publish`(url=`artifact_url`, file_path=`library/panel_online.html`, files=`ops/_publish_1.json` 내용 — 페이지·`index.json`·`build_info.*`·`online/` 데이터 묶음 약 20개). `_publish_2.json` 이 있으면 같은 file_path 로 한 번 더.
    - **`capabilities` 는 넘기지 않습니다**(넘기면 패널 버튼의 연결 권한이 바뀝니다).
 7. 상태 기록: `status=done, step=4, finished, version=<병합 커밋>, collected_years, panel_published=true, message="<연도>년 반영 완료 — 장표 n개, 셀 n개"`.
 
