@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 
-RAW_DIRS = [ROOT / "data" / "raw" / "taas", ROOT / "data" / "raw" / "population"]
+RAW_DIRS = [ROOT / "data" / "raw" / "taas", ROOT / "data" / "raw" / "population", ROOT / "data" / "raw" / "external"]
 TEMPLATE = ROOT / "panel" / "panel_template.html"
 MANIFEST = ".build_manifest.json"
 REPO, BRANCH = "jaykayLee/TAAS_Analysis_for_Safety", "main"
