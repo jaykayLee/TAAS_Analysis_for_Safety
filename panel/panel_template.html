@@ -393,7 +393,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
         <div class="controls"><div class="field"><label for="oY">종속 계열 (Y)</label><select id="oY"></select></div>
           <div class="field"><label for="oMode">처리</label><select id="oMode"><option value="raw">원값</option><option value="log">로그 (탄력성)</option><option value="diff">1차 차분</option><option value="z">표준화</option></select></div>
           <div class="field"><label>&nbsp;</label><label class="xck"><input type="checkbox" id="oTrend">추세항(연도) 포함</label></div>
-          <div class="field"><label for="oDummy">더미: 이 연도 이후 = 1</label><input type="number" id="oDummy" placeholder="없음" style="width:90px"></div></div>
+          <div class="field"><label for="oDummy" title="2020 → 2020년 이후 = 1 · 2020-2021 → 그 기간만 = 1 (예: 코로나 등교 중단)">더미 연도 (2020 또는 2020-2021)</label><input type="text" id="oDummy" placeholder="없음" style="width:110px"></div></div>
         <div class="controls"><div class="field" style="width:100%"><label>설명 계열 (X) — 체크</label><div class="xcks" id="oX"></div></div></div>
         <div class="card"><h3>회귀 결과</h3><div class="mout" id="oOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="ols">결과 담기</button><button class="btn small" type="button" data-csv="ols">이 결과 CSV 저장</button></div></div>
         <div class="card"><div class="charthead"><h3 id="hOls">실측 vs 적합</h3><div class="ctools" data-for="mOls"><button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div><div class="chartbox "><canvas id="cvOls" role="img" aria-label="실측 vs 적합"></canvas></div><div class="hint">클릭 = 기준선 M1 · Ctrl+클릭 = M2 와 차이 · 드래그 = 확대 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기</div><div class="mbar" id="mbOls"></div></div>
@@ -1128,12 +1128,12 @@ function mOls(pool){
   box.dataset.y=yName;
   box.innerHTML=pool.filter(c=>c.name!==yName).map(c=>`<label class="xck" title="${esc(c.name)}"><input type="checkbox" value="${esc(c.name)}" ${prev.has(c.name)?'checked':''}>${c.no}. ${esc(shortNm(c.name))}</label>`).join('')||'<span class="crumb">다른 계열이 없습니다</span>';
   box.querySelectorAll('input').forEach(i=>i.onchange=()=>mOls(S.pool));
-  const xn=[...box.querySelectorAll('input:checked')].map(i=>i.value), useT=$('#oTrend').checked, dy=+$('#oDummy').value||0;
+  const xn=[...box.querySelectorAll('input:checked')].map(i=>i.value), useT=$('#oTrend').checked, dm=String($('#oDummy').value||'').match(/^\s*(\d{4})(?:\s*[-~]\s*(\d{4}))?\s*$/), dy=dm?+dm[1]:0, dy2=dm&&dm[2]?+dm[2]:0;
   const yi=pool.findIndex(c=>c.name===yName), xi=xn.map(n=>pool.findIndex(c=>c.name===n)).filter(i=>i>=0);
   const G=grid(pool,mode==='z'?'raw':mode); const W=listwise(G,[yi,...xi]); let y=W.cols[0], X=W.cols.slice(1); const names=xi.map(i=>`${pool[i].no}. ${shortNm(pool[i].name)}`);
   if(mode==='z'){ y=zs(y); X=X.map(zs) }
   if(useT){ X.push(W.years.map(v=>v)); names.push('연도(추세)') }
-  if(dy){ X.push(W.years.map(v=>v>=dy?1:0)); names.push(`${dy}년 이후 더미`) }
+  if(dy){ X.push(W.years.map(v=>dy2?(v>=dy&&v<=dy2?1:0):(v>=dy?1:0))); names.push(dy2?`${dy}~${dy2}년 더미`:`${dy}년 이후 더미`) }
   if(yi<0||!X.length){ $('#oOut').innerHTML='<div class="empty">종속 계열과 설명 계열(또는 추세항)을 고르세요.</div>'; drawM('mOls','line',[],[]); S.cur.ols=[]; return }
   const r=ST.ols(y,X,names);
   if(r.err){ $('#oOut').innerHTML=`<div class="empty">${r.err} (사용 가능한 연도 ${y.length}개)</div>`; drawM('mOls','line',[],[]); S.cur.ols=[]; return }
