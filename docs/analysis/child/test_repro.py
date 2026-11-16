@@ -1,9 +1,9 @@
 """패널 재현 시험 — 설명서의 순서를 그대로 클릭해 같은 수치가 나오는지 확인"""
 import asyncio, json, sys
 from playwright.async_api import async_playwright
-SP = "/tmp/claude-0/-home-claude/0273b183-29fa-51a8-bda9-5907ce493a03/scratchpad"
-LIB = "/home/claude/taas_analysis_for_safety/library"
-SHOT = "/home/claude/child_analysis/shots/"
+SP = __import__("os").environ.get("CHARTJS_DIR", ".")  # Chart.js 로컬 사본(node_modules)이 있는 폴더
+LIB = str(__import__("pathlib").Path(__file__).resolve().parents[3] / "library")
+SHOT = str(__import__("pathlib").Path(__file__).resolve().parent / "shots") + "/"
 TABLES = [("7199", "사고유형별·시간대별 (어린이) 교통사고"), ("7194", "시도 시군구별 (어린이) 교통사고"), ("9001", "연령구분별 인구 (어린이·일반·노인)"),
           ("1", "주요 교통지표의 추이"), ("19", "교통안전시설"), ("9003", "어린이보호구역 지정 현황")]
 
@@ -83,7 +83,7 @@ async def main():
         out["ols_infra"] = await pg.evaluate("()=>TAAS_DEBUG().S.cur.ols.filter(r=>r.항목==='계수'||r.통계량==='R²').map(r=>[r.상대.slice(-28),r.통계량,r.값,r.p값])")
         out["errors"] = errs
         await b.close()
-    json.dump(out, open("/home/claude/child_analysis/repro.json", "w"), ensure_ascii=False, indent=1, default=str)
+    json.dump(out, open(SHOT + "../repro.json", "w"), ensure_ascii=False, indent=1, default=str)
     print(json.dumps(out, ensure_ascii=False, indent=1, default=str)[:6000])
 
 asyncio.run(main())

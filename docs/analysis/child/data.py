@@ -1,5 +1,5 @@
 import duckdb, pandas as pd, json
-LIB="/home/claude/taas_analysis_for_safety/library"
+LIB=str(__import__("pathlib").Path(__file__).resolve().parents[3] / "library")
 c=duckdb.connect(); F=f"read_parquet('{LIB}/parquet/facts.parquet')"
 def q(s): return c.sql(s).df()
 Y=list(range(2005,2026))
