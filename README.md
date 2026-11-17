@@ -83,28 +83,34 @@ python build.py
 | 경로 | 내용 |
 |---|---|
 | `build.py`, `빌드_실행.bat` | 원본 → 라이브러리·패널 한 번에 만들기 |
-| `ops/` | 자동 갱신 절차서(`AUTO_UPDATE.md`)·설정(`auto_update.json`)·Claude 앱 프롬프트·상태 점검·검증·게시 계획 |
+| `ops/` | 자동 갱신 절차서(TAAS `AUTO_UPDATE.md`, 부처 자료 `EXT_UPDATE.md`)·설정(`auto_update.json`, 부처 수집 목록 `ext_sources.json`)·Claude 앱 프롬프트·상태 점검·검증(`verify.py`, `verify_ext.py`)·게시 계획 |
 | `serve.py`, `패널_열기.bat`, `업데이트.bat` | 로컬 서버로 패널 열기(업데이트 버튼 동작) / 업데이트만 실행 |
 | `data/raw/taas/` | TAAS 수집 원본 (5년 단위 json.gz) |
-| `data/raw/population/` | 통계청 인구를 라이브러리 형식으로 바꾼 원본 (장표 9001·9002) |
-| `data/source/kosis/` | 통계청 KOSIS 원본 엑셀 (`python build.py --pop` 으로 인구 원본 재생성) |
-| `src/` | 라이브러리 조립(`build_library.py`), 패널 생성(`build_panel.py`), 새 연도 통합(`update_library.py`), 엑셀(`build_excel.py`), 인구 변환(`make_pop_raw.py`), Python 로더(`taas.py`) |
+| `data/raw/ext/<부처>/` | 부처별 외부 라이브러리 원본 (kostat 통계청 · mois 행정안전부 · molit 국토교통부 · police 경찰청 · policy 제도 연표) |
+| `data/source/ext/<부처>/` | 부처 원자료 — KOSIS 수집 결과(`kosis/*.csv.gz`), 인구총조사 엑셀, 어린이보호구역·제도 연표 CSV (`python build.py --ext [부처]` 로 원본 재생성) |
+| `src/` | 라이브러리 조립(`build_library.py`), 패널 생성(`build_panel.py`), 새 연도 통합(`update_library.py`), 엑셀(`build_excel.py`), 부처 자료 변환(`make_ext_raw.py`, 인구총조사 `make_pop_raw.py`), Python 로더(`taas.py`) |
 | `panel/panel_template.html` | 분석 패널 원본 (모든 화면 기능·통계 기법 코드) |
-| `collector/` | TAAS 수집기 (Python + Playwright, v9 직접 조회 전략) |
+| `collector/` | TAAS 수집기 (Python + Playwright, v9 직접 조회 전략), KOSIS 수집기(`browser/kosis_collect.js`, OpenAPI 또는 화면 다운로드) |
 | `docs/` | 사용 매뉴얼(pptx)과 매뉴얼 생성 코드, 수집 현황·2025 엑셀·분석 결과 |
 | `tests/` | 패널 자동 시험(Playwright), 통계 기법 계산 검증(statsmodels·pymannkendall 대조) |
-| `library/` | **생성물 (git 제외)** — `panel.html`, `index.js`, `panel_js/`, `parquet/` 등 |
+| `library/` | **생성물 (git 제외)** — `panel.html`, `index.js`, `panel_js/`, `parquet/` 등 · 부처 라이브러리 `ext/<부처>/` · 부처 장표 목록 `ext_index.json` |
 
 ## 데이터
 
 | 장표 | 출처 | 비고 |
 |---|---|---|
 | 1~7322 (338개) | [TAAS 교통사고분석시스템 › 교통사고 상세통계](https://taas.koroad.or.kr/sta/acs/exs/typical.do?menuId=WEB_KMP_OVT_UAS_ASA) | 수치항목 6종(사고·사망·부상·중상·경상·부상신고) 모두 켬, 조건 필터 없음 |
-| 9001 연령구분별 인구 (어린이·일반·노인) | 통계청 KOSIS 「인구총조사」 | 어린이 0~12세(TAAS 기준)는 5세 단위 자료로 **추정**: 0~4 + 5~9 + 10~14×3/5 |
+| 9001 연령구분별 인구 (어린이·일반·노인) | 통계청 KOSIS 「인구총조사」 (라이브러리 `kostat`) | 어린이 0~12세(TAAS 기준)는 5세 단위 자료로 **추정**: 0~4 + 5~9 + 10~14×3/5 |
 | 9002 연령별 인구 (5세 단위) | 〃 | 2005·2010년 외국인 제외 / 2015년~ 외국인 포함 — 2010→2015 사이 수준 차이 |
-| 9003 어린이보호구역 지정 현황 | 경찰청 (e-나라지표 1616) | 2009~2024 지정개소, 지정대상·지정률은 2021년까지 (`data/source/external/`) |
+| 9003 어린이보호구역 지정 현황 | 경찰청 (e-나라지표 1616, 라이브러리 `police`) | 2009~2024 지정개소, 지정대상·지정률은 2021년까지 |
+| 9101·9102 주민등록인구 (5세 단위 · 어린이·일반·노인) | 행정안전부 (KOSIS DT_1B04005·DT_1B04005N, `mois`) | 2005~2025 **매년 실측** (12월 말) — 인구총조사 빈 연도를 보간 대신 이것으로 |
+| 9201~9205 자동차 등록대수·이륜차·도로 연장·평균 일교통량·주행거리 | 국토교통부·한국교통안전공단 (KOSIS, `molit`) | 사고율 분모(노출량). 주행거리는 2012~ |
+| 9301~9304 운전면허 소지자 (면허종별·성별·연령대별·시도별) | 경찰청 (KOSIS, `police`) | 연령대·시도별은 2019~ |
+| 9901 교통안전 제도 시행 (연도 더미) | 국가법령정보센터 등 (`policy`, `data/source/ext/policy/정책_연표.csv`) | 음주·속도·어린이·보행자·고령·PM 등 18개 제도 — 중단 시계열 개입 연도·다중회귀 더미 |
 
-- 인구 실측 연도: 2005, 2010, 2015~2025 (2006~09·2011~14는 `인구_연간보간[명]` 수치로 직선 보간, 실측 아님)
+- 9101~9304 는 KOSIS 에서 부처마다 따로 받습니다(`ops/EXT_UPDATE.md`). 아직 받지 않은 장표는 목록에 나오지 않습니다.
+- 인구총조사(9001) 실측 연도: 2005, 2010, 2015~2025 (2006~09·2011~14는 `인구_연간보간[명]` 직선 보간). 매년 실측이 필요하면 주민등록인구(9102)를 분모로 쓰세요.
+- 패널 '비율 환산'은 분모 계열과 배율(10만·1만·1천·%·1억)을 고릅니다 — 예: 사고 ÷ 자동차 등록대수 × 1만, 사망 ÷ 주행거리(대·km) × 1억.
 - Python: `from taas import Taas; t = Taas("library"); t.search("어린이")` (자세한 사용법은 `src/LIBRARY_README.md`)
 
 ## 검증

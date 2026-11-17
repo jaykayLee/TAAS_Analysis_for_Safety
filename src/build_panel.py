@@ -7,7 +7,15 @@ usage: python build_panel.py <library_dir> <template.html> [sample_out.html]
 import base64, gzip, json, re, sys
 from pathlib import Path
 
-SAMPLE_PIDS = [7019, 7300, 1, 9001, 9002, 7196, 7240, 7092, 7066, 7051, 7160, 7110, 7097, 7089, 7269, 7210, 7030, 7086, 4]
+SAMPLE_PIDS = [7019, 7300, 1, 9001, 9002, 7196, 7240, 7092, 7066, 7051, 7160, 7110, 7097, 7089, 7269, 7210, 7030, 7086, 4, 9102, 9201, 9301, 9901]
+
+
+def panel_files(lib):
+    """TAAS(panel/) + 부처 라이브러리(ext/<부처>/panel/)의 장표 파일 {pid: path}"""
+    out = {}
+    for f in list((lib / "panel").glob("p*.json.gz")) + list((lib / "ext").glob("*/panel/p*.json.gz")):
+        out[int(f.name.split(".")[0][1:])] = f
+    return out
 
 
 def auto_config(tpl):
@@ -20,6 +28,13 @@ def auto_config(tpl):
     pr = ops / "APP_PROMPT.md"
     if pr.exists():
         cfg["app_prompt"] = pr.read_text(encoding="utf-8").replace("{artifact_url}", cfg.get("artifact_url", "")).strip()
+    pe = ops / "APP_PROMPT_EXT.md"
+    if pe.exists():
+        cfg["ext_app_prompt"] = pe.read_text(encoding="utf-8").replace("{artifact_url}", cfg.get("artifact_url", "")).strip()
+    src = ops / "ext_sources.json"
+    if src.exists():
+        cfg["ext_libs"] = {k: {"name": v["name"]} for k, v in json.loads(src.read_text(encoding="utf-8"))["libs"].items()}
+    cfg.pop("kosis_api_key", None)  # 혹시 넣어 둔 키는 패널에 싣지 않음
     return "window.TAAS_AUTO=" + json.dumps(cfg, ensure_ascii=False) + ";"
 
 
@@ -30,7 +45,7 @@ def write_online_packs(lib, target=1_200_000):
         for f in list(out.glob("pack_*.json.gz")) + list(out.glob("pack_*.txt")):
             f.unlink()
     out.mkdir(exist_ok=True)
-    files = sorted((lib / "panel").glob("p*.json.gz"), key=lambda f: int(f.stem.split(".")[0][1:]))
+    files = [f for _, f in sorted(panel_files(lib).items())]
     where, cur, size, n = {}, {}, 0, 0
 
     def flush():
@@ -46,7 +61,7 @@ def write_online_packs(lib, target=1_200_000):
         cur, size, n = {}, 0, n + 1
 
     for f in files:
-        pid = f.stem.split(".")[0][1:]
+        pid = f.name.split(".")[0][1:]
         cur[pid] = json.loads(gzip.open(f, "rt", encoding="utf-8").read())
         size += f.stat().st_size
         if size >= target:
@@ -63,25 +78,26 @@ def main(lib, tpl, sample_out=None, online_out=None):
     (lib / "panel.html").write_text(html.replace("/*__SAMPLE__*/", ""), encoding="utf-8")
     if online_out:  # claude.ai 게시용: index.json·online/packs.json·online/pack_*.txt 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
         man = lib / "online" / "packs.json"
-        newest = max(f.stat().st_mtime for f in (lib / "panel").glob("p*.json.gz"))
+        newest = max(f.stat().st_mtime for f in panel_files(lib).values())
         if not man.exists() or man.stat().st_mtime < newest:
             write_online_packs(lib)
-        Path(online_out).write_text(html.replace("/*__SAMPLE__*/", "window.TAAS_ONLINE=1;").replace('<script src="index.js" onerror="void 0"></script>', ""), encoding="utf-8")
+        Path(online_out).write_text(html.replace("/*__SAMPLE__*/", "window.TAAS_ONLINE=1;").replace('<script src="index.js" onerror="void 0"></script>', "").replace('<script src="ext_index.js" onerror="void 0"></script>', ""), encoding="utf-8")
     idx = json.loads((lib / "index.json").read_text(encoding="utf-8"))
+    ext = json.loads((lib / "ext_index.json").read_text(encoding="utf-8")) if (lib / "ext_index.json").exists() else {"patterns": [], "libs": {}, "events": []}
     # 차량기술 카드 장표명 점검
-    names = {p["name"] for p in idx["patterns"]}
+    names = {p["name"] for p in idx["patterns"] + ext["patterns"]}
     tech = re.findall(r"\{t:'[^']+',std:.*?name:'([^']+)'", html)
     missing = [t for t in tech if t not in names and not any(t.replace(" ", "") in n.replace(" ", "") for n in names)]
     if sample_out:
         files = {}
+        pf = panel_files(lib)
         for pid in SAMPLE_PIDS:
-            f = lib / "panel" / f"p{pid}.json.gz"
-            if f.exists():
-                files[pid] = json.loads(gzip.open(f, "rt", encoding="utf-8").read())
+            if pid in pf:
+                files[pid] = json.loads(gzip.open(pf[pid], "rt", encoding="utf-8").read())
         sidx = dict(idx); sidx["patterns"] = idx["patterns"]  # 목록은 전체, 데이터는 일부
         sidx["n_facts"] = sum(len(o["v"]) for o in files.values())
-        sample = "window.TAAS_SAMPLE=" + json.dumps({"index": sidx, "files": files}, ensure_ascii=False, separators=(",", ":")) + ";"
-        Path(sample_out).write_text(html.replace("/*__SAMPLE__*/", sample).replace('<script src="index.js" onerror="void 0"></script>', ""), encoding="utf-8")
+        sample = "window.TAAS_SAMPLE=" + json.dumps({"index": sidx, "ext": ext, "files": files}, ensure_ascii=False, separators=(",", ":")) + ";"
+        Path(sample_out).write_text(html.replace("/*__SAMPLE__*/", sample).replace('<script src="index.js" onerror="void 0"></script>', "").replace('<script src="ext_index.js" onerror="void 0"></script>', ""), encoding="utf-8")
     return {"tech_cards": len(tech), "tech_missing": missing, "sample_bytes": Path(sample_out).stat().st_size if sample_out else 0}
 
 

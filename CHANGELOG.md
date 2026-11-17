@@ -1,5 +1,17 @@
 # 변경 기록
 
+## 2026-11-18 — v1.5 부처별 외부 라이브러리 · 제도 시행 연표
+
+- **부처마다 따로 조립·갱신하는 외부 라이브러리** `library/ext/<부처>` (원본 `data/raw/ext/<부처>`, 원자료 `data/source/ext/<부처>`): kostat 통계청(9001·9002, 기존 인구총조사 이전) · police 경찰청(9003 이전, 9301~9304 운전면허 소지자) · mois 행정안전부(9101·9102 주민등록인구 5세별·연령구분별, 2005~2025 매년 실측) · molit 국토교통부(9201~9205 자동차 등록대수·이륜차·도로 연장·평균 일교통량·주행거리) · policy 제도 연표(9901)
+  - `python build.py --ext [부처]` — 그 부처 원본만 다시 만들고 그 부처 라이브러리만 다시 조립. TAAS 라이브러리(`library/`)는 그대로
+  - 패널은 `ext_index.json` 으로 부처 장표를 목록에 붙여 보여 줌(로컬·온라인·예시 모두). Python: `Library("library").ext("mois")`
+- KOSIS 수집기 `collector/browser/kosis_collect.js` (OpenAPI 키가 있으면 OpenAPI, 없으면 화면 다운로드 — 표 사이 60초, '비정상 이용' 차단 응답이면 즉시 중지), 수집 목록 `ops/ext_sources.json`, 변환 `src/make_ext_raw.py`
+  - 9101~9304 수치는 아직 받지 않음: 2026-11-17 첫 수집 중 KOSIS 가 짧은 시간의 반복 접속을 차단 → 부처별 갱신(`ops/EXT_UPDATE.md`)으로 받음
+- 부처 자료 갱신 절차 `ops/EXT_UPDATE.md`·`ops/APP_PROMPT_EXT.md`, 검증 `ops/verify_ext.py`, 패널 [업데이트] 창에 **부처 자료 — 부처마다 따로 갱신** 목록(상태 db `ops/last_run_<부처>`)
+- **제도 시행 연표** 25건(확인 13·부분확인 6·미확인 6, 근거 `data/source/ext/policy/SOURCES.md`) → 장표 9901(18개 제도 연도 더미, 다중회귀 설명변수) · 중단 시계열 '빠른 선택' 버튼 · 추세 비교 '제도 시행' 세로선 · 제도가 몰린 해(2019·2020·2021·2023) 경고
+- 비율 환산: 분모를 인구 외 어떤 계열로도(자동차·면허·주행거리·도로 연장), 배율 선택(10만·1만·1천·%·1·1억), 제도 더미는 나누지 않음
+- `ops/pc_sync.py`: 부처 원본만 바뀌면 PC 에서 바로 `build.py` 실행(빠름) · 시험 `tests/panel/test_ext.py`
+
 ## 2026-11-16 — v1.4 어린이 사고 분석 예시
 
 - 외부 장표 9003 「어린이보호구역 지정 현황」(경찰청, e-나라지표 1616, 2009~2024): `data/source/external/*.csv` → `src/make_external_raw.py` → `data/raw/external/` (build.py 가 자동 포함)
