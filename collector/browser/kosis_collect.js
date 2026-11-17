@@ -70,7 +70,7 @@
     return new TextDecoder('euc-kr').decode(await r2.arrayBuffer());
   }
 
-  // job: {key, orgId, tblId, prd:'Y'|'M', from, to, months:['12'], levels:{A:1}, items:[codes]|null, only:{A:[codes]}}
+  // job: {key, orgId, tblId, prd:'Y'|'M', from, to, months:['12'], levels:{A:1}, items:[codes]|null, only:{A:[codes]}, match:{A:'^\\d{2}$'}}
   async function fetchJob(job) {
     const W = await openTable(job.orgId, job.tblId); const t = trees(W);
     const prd = job.prd || (t.periods.includes('Y') ? 'Y' : t.periods[0]);
@@ -86,8 +86,8 @@
     items.forEach(c => fl.push({ targetId: 'ITM_ID', targetValue: c, prdValue: '' }));
     const axes = [];
     t.classes.forEach((c, i) => {
-      const L = (job.levels || {})[c.objVarId] || 1, only = (job.only || {})[c.objVarId];
-      const pick = c.nodes.filter(n => (only ? only.includes(n.code) : n.lvl <= L));
+      const L = (job.levels || {})[c.objVarId] || 1, only = (job.only || {})[c.objVarId], re = (job.match || {})[c.objVarId];
+      const pick = c.nodes.filter(n => (only ? only.includes(n.code) : re ? new RegExp(re).test(n.code) : n.lvl <= L));
       pick.forEach(n => fl.push({ targetId: `OV_L${i + 1}_ID`, targetValue: n.code, prdValue: '' }));
       axes.push(c.objVarId);
     });
