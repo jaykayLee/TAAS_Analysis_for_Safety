@@ -1,0 +1,47 @@
+{
+ "about": "부처별 외부 라이브러리 수집 목록. KOSIS 작업(kosis)은 collector/browser/kosis_collect.js 의 KC.run 에 그대로 넘깁니다. from/to 는 갱신 때 새 연도로 바꿔 씁니다(ops/EXT_UPDATE.md). 결과 CSV 는 data/source/ext/<lib>/<key>.csv 로 저장하고 src/make_ext_raw.py 가 장표(pid)로 바꿉니다.",
+ "libs": {
+  "kostat": {
+   "name": "통계청(국가데이터처)",
+   "pids": "9001-9002",
+   "kosis": []
+  },
+  "mois": {
+   "name": "행정안전부",
+   "pids": "9101-9199",
+   "kosis": [
+    {"key": "pop5_2005", "orgId": "101", "tblId": "DT_1B04005", "prd": "Y", "from": 2005, "to": 2010, "levels": {"A": 1}},
+    {"key": "pop5_2011", "orgId": "101", "tblId": "DT_1B04005N", "prd": "Y", "from": 2011, "to": 2025, "levels": {"A": 1}}
+   ]
+  },
+  "molit": {
+   "name": "국토교통부(한국교통안전공단 포함)",
+   "pids": "9201-9299",
+   "kosis": [
+    {"key": "car_sido", "orgId": "116", "tblId": "DT_MLTM_5498", "prd": "M", "months": ["12"], "from": 2011, "to": 2025, "only": {"13101873443B": ["13102873443B.0001"]}},
+    {"key": "car_e", "orgId": "101", "tblId": "DT_1YL20731", "prd": "Y", "from": 2005, "to": 2025, "match": {"SGG": "^\\d{2}$"}},
+    {"key": "moto_2005", "orgId": "116", "tblId": "DT_MLTM_2042", "prd": "Y", "from": 2005, "to": 2012},
+    {"key": "moto_sido", "orgId": "116", "tblId": "DT_MLTM_5559", "prd": "M", "months": ["12"], "from": 2013, "to": 2025, "only": {"13101866057B": ["13102866057B.0001"]}},
+    {"key": "road_sido", "orgId": "116", "tblId": "DT_MLTM_962", "prd": "Y", "from": 2005, "to": 2025},
+    {"key": "aadt", "orgId": "116", "tblId": "DT_MLTM_1240", "prd": "Y", "from": 2005, "to": 2025},
+    {"key": "vkt_sido", "orgId": "426", "tblId": "DT_426001_N004", "prd": "Y", "from": 2012, "to": 2025, "match": {"SGG": "^\\d{2}$"}}
+   ]
+  },
+  "police": {
+   "name": "경찰청(도로교통공단 포함)",
+   "pids": "9003, 9301-9399",
+   "kosis": [
+    {"key": "lic_type", "orgId": "132", "tblId": "TX_13201_A000", "prd": "Y", "from": 2005, "to": 2025, "levels": {"15132AA1": 2}},
+    {"key": "lic_sex_2005", "orgId": "132", "tblId": "TX_13201_A001", "prd": "Y", "from": 2005, "to": 2018},
+    {"key": "lic_sex", "orgId": "132", "tblId": "DT_13201_A004", "prd": "Y", "from": 2019, "to": 2025, "only": {"15132AA1": ["15132AA100"]}},
+    {"key": "lic_age", "orgId": "132", "tblId": "DT_13201_A002", "prd": "Y", "from": 2019, "to": 2025, "only": {"15132AA1": ["15132AA100"]}},
+    {"key": "lic_region", "orgId": "132", "tblId": "DT_13201_A005", "prd": "Y", "from": 2019, "to": 2025, "only": {"15132AA1": ["15132AA100"]}}
+   ]
+  },
+  "policy": {
+   "name": "교통안전 제도 시행 연표",
+   "pids": "9901-9999",
+   "kosis": []
+  }
+ }
+}
