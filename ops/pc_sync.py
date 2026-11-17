@@ -56,6 +56,8 @@ def main():
     rows = [l.split("\t") for l in git("-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", head, new).splitlines() if l]
     plan = [{"status": r[0], "path": r[-1]} for r in rows]
     data_changed = any(p["path"].startswith("data/raw/") or p["path"] == "src/build_library.py" for p in plan)
+    # 부처 라이브러리 원본(data/raw/ext)만 바뀌면 그 부처만 다시 조립하므로 빠름 → 여기서 바로 build.py 실행
+    ext_only = data_changed and all(not (p["path"].startswith("data/raw/") or p["path"] == "src/build_library.py") or p["path"].startswith("data/raw/ext/") for p in plan)
     if a.check:
         print(json.dumps({"from": head[:7], "to": new[:7], "files": plan, "data_changed": data_changed}, ensure_ascii=False, indent=1))
         return
@@ -78,12 +80,12 @@ def main():
     dirty = git("status", "--porcelain", "--untracked-files=no")
     res = {"from": head[:7], "to": new[:7], "changed": len(plan), "files": [p["path"] for p in plan], "moved_to__to_delete": moved,
            "git_clean": not dirty, "data_changed": data_changed, "stale_locks_moved": locks}
-    if data_changed:
+    if data_changed and not ext_only:
         res["next"] = "원본 데이터가 바뀌었습니다 — python build.py (전체 조립, pandas·pyarrow 필요)"
     else:
-        b = subprocess.run([sys.executable, "build.py", "--panel-only"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        b = subprocess.run([sys.executable, "build.py"] + ([] if ext_only else ["--panel-only"]), cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
                            env={**os.environ, "PYTHONIOENCODING": "utf-8"})
-        res["build"] = "패널 다시 생성 완료" if b.returncode == 0 else ("패널 생성 실패: " + b.stdout[-300:] + b.stderr[-300:])
+        res["build"] = ("부처 라이브러리·패널 다시 생성 완료" if ext_only else "패널 다시 생성 완료") if b.returncode == 0 else ("패널 생성 실패: " + b.stdout[-300:] + b.stderr[-300:])
     res["stale_locks_moved"] = locks + tidy_locks(t0)  # git status 등이 뒤늦게 남긴 잠금도 마지막에 한 번 더 정리
     res["seconds"] = round(time.time() - t0, 1)
     print(json.dumps(res, ensure_ascii=False, indent=1))

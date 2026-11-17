@@ -7,6 +7,8 @@ TAAS 교통사고 상세통계 라이브러리 로더
     df = lib.table(7019)                         # 한 장표 (축 이름이 컬럼명)
     s  = lib.series(7019, measure="사고[건]", 사고유형="추돌")   # 연도 시계열
     lib.corr([s1, s2], diff=True)                 # 상관 (1차 차분 기본)
+    lib.libs()                                    # 부처 라이브러리 목록 (kostat·mois·molit·police·policy)
+    pop = lib.ext("mois").series(9102, measure="인구[명]", 연령구분="어린이 0~12세")   # 부처 라이브러리도 같은 방법
 """
 import json
 from pathlib import Path
@@ -21,6 +23,15 @@ class Library:
         self.path = Path(path)
         self.patterns = pd.read_parquet(self.path / "parquet" / "patterns.parquet")
         self._facts = None
+
+    def libs(self):
+        """부처별 외부 라이브러리 이름 (library/ext/<부처>)"""
+        d = self.path / "ext"
+        return sorted(x.name for x in d.iterdir() if (x / "parquet").exists()) if d.exists() else []
+
+    def ext(self, name):
+        """부처 라이브러리 하나 (행정안전부 mois, 국토교통부 molit, 경찰청 police, 통계청 kostat, 제도 연표 policy)"""
+        return Library(self.path / "ext" / name)
 
     @property
     def facts(self):

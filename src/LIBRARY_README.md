@@ -25,6 +25,21 @@
 | `taas_collector.js` | TAAS 페이지에서 실행하는 수집기 |
 | `update_library.py`, `build_library.py` | 새 연도 통합 / 라이브러리 조립 |
 
+## 부처별 외부 라이브러리 (`ext/`)
+
+TAAS 와 따로 조립·갱신되는 부처 통계입니다. 폴더 구성은 이 라이브러리와 같습니다(`ext/<부처>/index.json`, `panel/`, `panel_js/`, `parquet/`).
+
+| 폴더 | 부처 | 장표 |
+|---|---|---|
+| `ext/kostat` | 통계청 | 9001·9002 인구총조사 |
+| `ext/mois` | 행정안전부 | 9101·9102 주민등록인구 (매년 실측) |
+| `ext/molit` | 국토교통부 | 9201 자동차 등록대수 · 9202 이륜차 · 9203 도로 연장 · 9204 평균 일교통량 · 9205 주행거리 |
+| `ext/police` | 경찰청 | 9003 어린이보호구역 · 9301~9304 운전면허 소지자 |
+| `ext/policy` | 제도 연표 | 9901 제도 시행 연도 더미 |
+
+`ext_index.json` 은 부처 장표 목록과 제도 연표(events)를 합친 것으로, 패널이 TAAS 목록 뒤에 붙여 보여 줍니다.
+Python: `lib = taas.Library("library"); lib.libs(); lib.ext("molit").series(9201, measure="등록대수[대]", 시도="전국")`
+
 ## 데이터 구조 (facts)
 
 | 컬럼 | 내용 |

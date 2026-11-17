@@ -1,6 +1,6 @@
 import duckdb, pandas as pd, json
 LIB=str(__import__("pathlib").Path(__file__).resolve().parents[3] / "library")
-c=duckdb.connect(); F=f"read_parquet('{LIB}/parquet/facts.parquet')"
+c=duckdb.connect(); F=f"read_parquet(['{LIB}/parquet/facts.parquet', '{LIB}/ext/*/parquet/facts.parquet'], union_by_name=true)"  # TAAS + 부처 라이브러리(9001 등)
 def q(s): return c.sql(s).df()
 Y=list(range(2005,2026))
 # 1) 어린이 사고 (7199, 시간대 합계)

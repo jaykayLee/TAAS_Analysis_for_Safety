@@ -21,7 +21,7 @@ def main():
     if not (LIB / "panel_online.html").exists():
         raise SystemExit("library/panel_online.html 이 없습니다. python build.py 를 먼저 실행하세요.")
     files = {}
-    for name in ["index.json", "build_info.js", "build_info.json"]:
+    for name in ["index.json", "ext_index.json", "build_info.js", "build_info.json"]:
         files[name] = f"library/{name}"
     files["online/packs.json"] = "library/online/packs.json"
     for p in sorted((LIB / "online").glob("pack_*.txt")):

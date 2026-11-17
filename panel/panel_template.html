@@ -224,6 +224,11 @@ table.grid td{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
 .appbox{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:10px;background:var(--bg)}
 .appbox[open]{border-color:var(--amber)}
 .appbox summary{cursor:pointer;font-weight:600;font-size:13px}
+.extbox{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.extbox h4{margin:0 0 6px;font-size:13px}
+.extrow{display:grid;grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.extrow .nm b{font-size:13px}
+@media (max-width:560px){.extrow{grid-template-columns:1fr auto}.extrow .st{grid-column:1/-1}}
 .appbox ol{margin:8px 0;padding-left:20px;font-size:12.5px;color:var(--fg-2)}
 .appbox textarea{width:100%;font:12px/1.5 var(--mono);border:1px solid var(--line-strong);border-radius:6px;padding:8px;background:var(--surface);color:var(--fg);resize:vertical}
 @media (max-width:560px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -330,12 +335,14 @@ table.corr td.sel{outline:2px solid var(--fg)}
         <div class="field"><label for="cDiff">시계열 처리</label><select id="cDiff"><option value="0">원값</option><option value="1" selected>1차 차분 (추세 제거)</option><option value="pct">증감률(%)</option></select></div>
         <div class="field"><label for="cLag">시차 (B를 n년 뒤로)</label><input type="number" id="cLag" value="0" min="-5" max="5"></div>
         <div class="field"><label for="cAxis">맞춤 축</label><select id="cAxis"></select></div>
-        <div class="field"><label for="cRate">비율 환산 (인구 대비)</label><select id="cRate"><option value="">없음</option></select></div>
+        <div class="field"><label for="cRate" title="고른 계열(분모)로 나머지 계열을 나눕니다. 인구(9001·9102)·자동차 등록대수(9201)·운전면허 소지자(9301~)·주행거리(9205)·도로 연장(9203) 등">비율 환산 (분모 계열)</label><select id="cRate"><option value="">없음</option></select></div>
+        <div class="field"><label for="cRateK">배율</label><select id="cRateK"><option value="100000" selected>× 10만</option><option value="10000">× 1만</option><option value="1000">× 1천</option><option value="100">× 100 (%)</option><option value="1">× 1</option><option value="100000000">× 1억 (대·km 등)</option></select></div>
       </div>
       <div class="note" id="corrNote">연도별 시계열은 대부분 같은 감소 추세를 공유해 원값끼리는 상관이 과대하게 나옵니다. 기본값인 1차 차분은 해마다의 증감끼리 비교합니다. 2005~2025년은 최대 21개 점이므로 p값을 함께 보세요.</div>
       <div class="card" id="setsCard" hidden><h3>선택한 통계 — 조건 바꾸기</h3><div class="sets" id="sets"></div>
         <div class="hint">축마다 '합계/특정 값'으로 고정하거나 '▦ 계열로 나누기'를 고르면 그 축의 값별로 계열이 생깁니다. 인구 장표는 연령구분(전체·어린이·일반·노인)으로 나눠 둡니다.</div></div>
       <div class="card" id="trCard" hidden><div class="charthead"><h3 id="trTitle">추세 비교</h3><div class="ctools" data-for="tr">
+          <label class="btn small" title="제도 시행 연표의 개입 연도를 세로선으로 표시"><input type="checkbox" id="tEv"> 제도 시행</label>
           <select id="tNorm" aria-label="추세 비교 값 변환" class="btn small"><option value="index">첫 연도=100 (지수)</option><option value="z">표준화 (z점수)</option><option value="raw">원값</option></select>
           <button class="btn small" type="button" data-act="reset">전체 보기</button><button class="btn small" type="button" data-act="clear">기준선·메모 지우기</button><button class="btn small" type="button" data-act="png">PNG 저장</button></div></div>
         <div class="legend" id="tlegend"></div>
@@ -410,7 +417,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
       <div class="mpane" data-m="its" hidden>
         <details class="about"><summary>이 기법은?</summary><div><b>중단 시계열 분석(분절 회귀)</b>은 정책·기술 도입 연도 T를 기준으로 y = b0 + b1·t + b2·D + b3·(t−T)·D 를 적합해, 도입 직후의 <b>수준 변화(b2)</b>와 그 뒤 <b>기울기 변화(b3)</b>를 추정합니다. 점선은 도입이 없었다면 이어졌을 추세(반사실)입니다. 같은 시기의 다른 요인을 배제하지 못하므로, 대상 계열(예: 대형차 추돌)과 비교 계열(예: 승용차 추돌)을 함께 넣어 차이를 보세요. 연 단위 21개 점에서는 b2·b3의 p값이 크게 나오기 쉽습니다.</div></details>
         <div class="controls"><div class="field"><label for="iYear">도입(개입) 연도 T</label><input type="number" id="iYear" value="2017" style="width:90px"></div>
-          <div class="field"><label>빠른 선택</label><span class="presets"><button class="btn small" type="button" data-y="2017" title="길이 11m 초과 승합·총중량 20t 이상 화물/특수 신차 비상자동제동장치 의무 (2017.1)">2017 대형차 AEBS</button><button class="btn small" type="button" data-y="2020" title="사업용 대형 버스·화물차 차로이탈경고장치 기존차 장착 기한 2019년 말">2020 대형차 LDWS 완료</button><button class="btn small" type="button" data-y="2020" title="어린이보호구역 처벌 강화·시설 확충 (2020.3 시행)">2020 민식이법</button><button class="btn small" type="button" data-y="2021" title="도시부 제한속도 50km/h·이면도로 30km/h 전국 시행 (2021.4)">2021 안전속도 5030</button></span></div>
+          <div class="field"><label>빠른 선택</label><span class="presets"><button class="btn small" type="button" data-y="2017" title="길이 11m 초과 승합·총중량 20t 이상 화물/특수 신차 비상자동제동장치 의무 (2017.1)">2017 대형차 AEBS</button><button class="btn small" type="button" data-y="2020" title="사업용 대형 버스·화물차 차로이탈경고장치 기존차 장착 기한 2019년 말">2020 대형차 LDWS 완료</button><button class="btn small" type="button" data-y="2020" title="어린이보호구역 처벌 강화·시설 확충 (2020.3 시행)">2020 민식이법</button><button class="btn small" type="button" data-y="2021" title="도시부 제한속도 50km/h·이면도로 30km/h 전국 시행 (2021.4)">2021 안전속도 5030</button></span><span class="presets" id="evPresets" title="제도 시행 연표(부처 자료 policy) — 시행일이 7월 이후면 다음 해"></span><div class="hint" id="evWarn"></div></div>
           <div class="field"><label for="iMode">처리</label><select id="iMode"><option value="raw">원값</option><option value="log">로그 (변화율)</option></select></div>
           <div class="field"><label for="iSeries">그래프 계열 (표의 행을 눌러도 됨)</label><select id="iSeries"></select></div></div>
         <div class="card"><h3>계열별 도입 효과</h3><div class="mout" id="iOut"></div><div class="row-actions"><button class="btn small primary" type="button" data-add="its">결과 담기</button><button class="btn small" type="button" data-csv="its">이 결과 CSV 저장</button></div></div>
@@ -447,12 +454,19 @@ table.corr td.sel{outline:2px solid var(--fg)}
     <textarea id="appPrompt" readonly rows="8" aria-label="Claude 앱에 붙여 넣을 프롬프트"></textarea>
     <div class="dlgrow"><button class="btn primary small" id="appCopy" type="button">프롬프트 복사</button><span class="dlgnote" id="appCopied"></span></div>
   </details>
+  <div class="extbox" id="extBox"><h4>부처 자료 — 부처마다 따로 갱신</h4>
+    <div class="dlgnote">TAAS 와 별도 라이브러리(<code>library/ext/부처</code>)입니다. 갱신 버튼은 그 부처 통계만 KOSIS 등에서 새로 받아 그 부처 라이브러리만 다시 만듭니다(예약 작업 <b id="extTaskNm">TAAS 부처 자료 갱신</b>, 이 PC 필요).</div>
+    <div id="extRows"></div><div class="dlgnote" id="extEnv"></div>
+    <details class="appbox" id="extAppBox"><summary>Claude 앱에서 직접 실행 (부처 자료)</summary><textarea id="extPrompt" readonly rows="6" aria-label="부처 자료 갱신 프롬프트"></textarea>
+      <div class="dlgrow"><button class="btn primary small" id="extCopy" type="button">프롬프트 복사</button><span class="dlgnote" id="extCopied"></span></div></details>
+  </div>
 </div></div>
 <span class="toast" id="toast" role="status" aria-live="polite"></span>
 <script>
 /*__SAMPLE__*/
 </script>
 <script src="index.js" onerror="void 0"></script>
+<script src="ext_index.js" onerror="void 0"></script>
 <script src="build_info.js" onerror="void 0"></script>
 <script>
 (()=>{
@@ -461,7 +475,7 @@ const $=s=>document.querySelector(s);
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt=new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2});
 const TOTALS=new Set(['합계','계','전국','전체','소계']);
-const S={index:null, files:new Map(), cache:new Map(), mode:'sample', pid:null, P:null, st:null, corr:[], chart:null, sc:null, sel:[0,1], subClosed:new Set(), checked:new Set(), sets:[], setSeq:0, rateDen:'', tr:null};
+const S={index:null, files:new Map(), cache:new Map(), mode:'sample', pid:null, P:null, st:null, corr:[], chart:null, sc:null, sel:[0,1], subClosed:new Set(), checked:new Set(), sets:[], setSeq:0, rateDen:'', rateK:1e5, tr:null, ext:null, events:[]};
 try{ S.checked=new Set(JSON.parse(localStorage.getItem('taas.checked')||'[]').map(Number)) }catch(e){}
 try{ S.subClosed=new Set(JSON.parse(localStorage.getItem('taas.subClosed')||'[]')) }catch(e){}
 
@@ -481,6 +495,7 @@ async function openFiles(list){
     const idx=JSON.parse(await idxF.text());
     S.files=new Map(); for(const f of files){const m=f.name.match(/^p(\d+)\.json(\.gz)?$/); if(m) S.files.set(+m[1],f)}
     S.index=idx; S.cache=new Map(); S.mode='live'; S.corr=[]; S.sets=[];
+    const exF=files.find(f=>/(^|\/)ext_index\.json$/.test(f.webkitRelativePath||f.name)); if(exF) mergeExt(JSON.parse(await exF.text()));
     renderStat(); renderTree(); renderTech(); renderCorr();
     const first=idx.patterns.find(p=>p.pid===7019&&S.files.has(7019))||idx.patterns.find(p=>S.files.has(p.pid));
     if(first) selectPattern(first.pid);
@@ -491,7 +506,7 @@ const _wait=new Map(); // 장표별 대기열 — 빠르게 여러 장표를 눌
 window.TAAS_LOAD=o=>{const f=o&&_wait.get(o.pid); if(f){_wait.delete(o.pid); f(o)}};
 function loadScript(pid){ // 라이브러리 폴더에서 panel.html 을 직접 연 경우
   return new Promise(res=>{ _wait.set(pid,res);
-    const s=document.createElement('script');s.src=`panel_js/p${pid}.js`;s.onerror=()=>{_wait.delete(pid);res(null)};s.onload=()=>{s.remove(); if(_wait.has(pid)){_wait.delete(pid);res(null)}};document.head.appendChild(s)});
+    const m=meta(pid), s=document.createElement('script');s.src=m&&m.lib?`ext/${m.lib}/panel_js/p${pid}.js`:`panel_js/p${pid}.js`;s.onerror=()=>{_wait.delete(pid);res(null)};s.onload=()=>{s.remove(); if(_wait.has(pid)){_wait.delete(pid);res(null)}};document.head.appendChild(s)});
 }
 async function getPattern(pid){
   if(S.cache.has(pid)) return S.cache.get(pid);
@@ -515,6 +530,33 @@ function hasData(pid){
   if(S.mode==='sample') return !!(window.TAAS_SAMPLE&&window.TAAS_SAMPLE.files[pid]);
   if(S.mode==='local'||S.mode==='online'){const p=meta(pid);return !!(p&&p.n_facts>0)}
   return S.files.has(pid)}
+
+/* ---------- 부처 라이브러리(ext) · 제도 연표 ---------- */
+function mergeExt(ext){ // 부처별 라이브러리 목록을 TAAS 목록 뒤에 붙임 (장표 번호 9000번대)
+  if(!ext||!S.index) return; const ids=new Set((ext.patterns||[]).map(p=>p.pid));
+  S.index={...S.index, patterns:S.index.patterns.filter(p=>!ids.has(p.pid)).concat(ext.patterns||[])};
+  S.ext=ext; S.events=(ext.events||[]).filter(e=>e.its); renderEvents() }
+const EVCAT={음주:'#c2410c',속도:'#7c3aed',어린이:'#0f766e',보행자:'#2563eb',고령:'#a16207',이륜PM:'#be185d',안전띠:'#4d7c0f',사업용:'#475569',기타:'#64748b',외생:'#991b1b'};
+function renderEvents(){ // 중단 시계열의 '빠른 선택'에 제도 연표 버튼 추가
+  const host=document.getElementById('evPresets'); if(!host) return;
+  const seen=new Set(), ev=S.events.filter(e=>e.status!=='미확인').filter(e=>{const k=e.its+shortEv(e.name); if(seen.has(k)) return false; seen.add(k); return true}).sort((p,q)=>p.its-q.its);
+  host.innerHTML=ev.length?ev.map(e=>`<button class="btn small" type="button" data-y="${e.its}" style="border-left:3px solid ${EVCAT[e.cat]||'#64748b'}" title="${esc(e.name)} — 시행 ${esc(e.date)} · ${esc(e.cat)} · 확인 상태 ${esc(e.status)}${e.note?' · '+esc(e.note):''}">${e.its} ${esc(shortEv(e.name))}</button>`).join(''):'';
+  host.querySelectorAll('[data-y]').forEach(b=>b.onclick=()=>{$('#iYear').value=b.dataset.y;renderMethods()});
+  const same=new Map(); ev.forEach(e=>same.set(e.its,(same.get(e.its)||0)+1));
+  const crowd=[...same].filter(([y,n])=>n>=3).map(([y])=>y).sort();
+  const w=document.getElementById('evWarn'); if(w) w.textContent=crowd.length?`같은 해에 제도가 3개 이상 몰린 해: ${crowd.join('·')}년 — 연 단위 자료로는 효과를 따로 떼기 어렵습니다.`:'' }
+function shortEv(n){ n=n.replace(/\(.*?\)/g,'').replace(/—.*$/,'').trim(); return n.length>14?n.slice(0,13)+'…':n }
+/* 추세 비교·중단 시계열 그래프에 제도 시행 연도 세로선 */
+const evLines={id:'evLines',afterDatasetsDraw(ch,_,o){ if(!o||!o.on||!S.events.length) return; const x=ch.scales.x, a=ch.chartArea; if(!x||!a) return;
+  const by=new Map(); S.events.filter(e=>e.status!=='미확인'&&(!o.cats||o.cats.includes(e.cat))).forEach(e=>{const k=String(e.its); if(!by.has(k)) by.set(k,[]); by.get(k).push(e)});
+  const c=ch.ctx; c.save(); c.font='11px system-ui,sans-serif';
+  const ends=[]; // 글자가 겹치면 아랫줄로
+  for(const [y,list] of [...by].sort((p,q)=>p[0]-q[0])){ const i=ch.data.labels.indexOf(y); if(i<0) continue; const px=x.getPixelForValue(i); if(px<a.left||px>a.right) continue;
+    c.strokeStyle=EVCAT[list[0].cat]||'#64748b'; c.globalAlpha=.55; c.setLineDash([4,4]); c.beginPath(); c.moveTo(px,a.top); c.lineTo(px,a.bottom); c.stroke();
+    const t=list.length>1?`${shortEv(list[0].name)} 외 ${list.length-1}`:shortEv(list[0].name), w=c.measureText(t).width;
+    const x0=px+3+w>a.right?px-3-w:px; let row=0; while(ends[row]!=null&&ends[row]>x0) row++; ends[row]=x0+w+8;
+    const tx=px+3+w>a.right?px-3-w:px+3; c.globalAlpha=.9; c.setLineDash([]); c.fillStyle=c.strokeStyle; c.fillText(t,tx,a.top+11+row*13) }
+  c.restore() }};
 
 /* ---------- 헤더/트리 ---------- */
 function renderStat(){
@@ -804,6 +846,14 @@ function corrOf(A,B,lag,isYear,method){const p=pair(A,B,lag,isYear);let r;if(met
 function divColor(r){ if(!isFinite(r)) return css('--surface-2');
   const mix=(c1,c2,t)=>`color-mix(in srgb, ${c2} ${Math.round(t*100)}%, ${c1})`;
   return r>=0?mix(css('--div-mid'),css('--div-pos'),Math.min(1,r)):mix(css('--div-mid'),css('--div-neg'),Math.min(1,-r)) }
+/* 비율 환산: 분모 계열로 나누고 배율을 곱함. 인구 장표가 분모면 '명당', 아니면 '당' */
+const RK={100000:'10만',10000:'1만',1000:'1천',100:'100',1:'1',100000000:'1억'};
+const POP_PIDS=new Set([9001,9002,9101,9102]);
+function rateLabel(){ const den=S.corr.find(c=>c.name===S.rateDen); const pop=den&&POP_PIDS.has(den.pid); return S.rateK===100?'백분율(%)':S.rateK===1?'비율':`${RK[S.rateK]||S.rateK}${pop?' 명':''}당` }
+function applyRate(act,den){ const k=S.rateK||1e5, lb=rateLabel();
+  return act.filter(c=>c!==den).map(c=>{ if(den.src&&c.src===den.src) return c; /* 같은 장표의 다른 구분(예: 연령구분)은 나누지 않음 */
+    if(/\[0\/1\]/.test(c.name)) return c; /* 제도 시행 더미(0/1)는 나누지 않음 */
+    const pts=new Map(); for(const [y,v] of c.pts){const d=den.pts.get(y); if(d) pts.set(y,v/d*k)} return {...c,name:c.name+` (${lb})`,pts}}) }
 function renderCorr(){
   $('#corrN').textContent=S.corr.length;
   const axes=[...new Set(S.corr.map(c=>c.axis))]; const sel=$('#cAxis'); const cur=sel.value;
@@ -819,11 +869,12 @@ function renderCorr(){
   renderSets();
   // 비율 환산: 고른 계열(예: 어린이 인구)로 나머지를 나눠 10만 명당 값으로
   const rs=$('#cRate'), yearSer=S.corr.filter(c=>c.on&&c.axis==='연도');
-  rs.innerHTML='<option value="">없음</option>'+yearSer.map(c=>`<option value="${esc(c.name)}">÷ ${esc(c.name)} × 10만</option>`).join('');
+  rs.innerHTML='<option value="">없음</option>'+yearSer.map(c=>`<option value="${esc(c.name)}">÷ ${esc(c.name)}</option>`).join('');
+  $('#cRateK').value=String(S.rateK); $('#cRateK').disabled=!isYear||!S.rateDen;
   if(!yearSer.some(c=>c.name===S.rateDen)) S.rateDen=''; rs.value=S.rateDen; rs.disabled=!isYear;
   const den=isYear&&S.rateDen?S.corr.find(c=>c.name===S.rateDen):null;
   let act=S.corr.filter(c=>c.on&&c.axis===axis);
-  if(den) act=act.filter(c=>c!==den).map(c=>{ if(den.src&&c.src===den.src) return c; /* 같은 인구 장표의 다른 연령구분은 나누지 않음 */ const pts=new Map(); for(const [k,v] of c.pts){const d=den.pts.get(k); if(d) pts.set(k,v/d*1e5)} return {...c,name:c.name+' (10만 명당)',pts}});
+  if(den) act=applyRate(act,den);
   drawTrend(isYear?act:[]);
   const mode=$('#cDiff').value, lag=+$('#cLag').value||0, method=$('#cMethod').value;
   const M=$('#cmat');
@@ -873,7 +924,7 @@ function seriesOfSet(T,P){
   const R=compute(P,st);
   const fixed=P.dim_names.map((n,i)=>i===T.split||T.fix[i]===-1?null:P.dicts[i][T.fix[i]]).filter(v=>v&&!TOTALS.has(v));
   return R.series.map(s=>{ const pts=new Map(); R.xlabels.forEach((xl,j)=>{if(s.vals[j]!==null) pts.set(xl,s.vals[j])});
-    return {name:[T.name,P.measures[T.measure],...fixed,T.split!==null?s.label:null].filter(Boolean).join(' · '),axis:'연도',pts,on:true,src:T.id} });
+    return {name:[T.name,P.measures[T.measure],...fixed,T.split!==null?s.label:null].filter(Boolean).join(' · '),axis:'연도',pts,on:true,src:T.id,pid:T.pid} });
 }
 async function rebuildSet(T){
   const P=await getPattern(T.pid); if(!P) return;
@@ -921,10 +972,10 @@ function drawTrend(act){
   lg.innerHTML=ds.map((d,k)=>`<span data-k="${k}" class="${d.hidden?'off':''}" title="클릭해서 숨기기/보이기"><i style="background:${d.borderColor}"></i>${esc(d.label)}</span>`).join('');
   lg.querySelectorAll('[data-k]').forEach(el=>el.onclick=()=>{const k=+el.dataset.k,c=S.tr;if(!c)return;const v=!c.isDatasetVisible(k);c.setDatasetVisibility(k,v);
     const nm=c.data.datasets[k].label; v?hid.delete(nm):hid.add(nm); el.classList.toggle('off',!v); CTL.tr.fitY(c); c.update('none'); CTL.tr.renderBar()});
-  $('#trTitle').textContent='추세 비교 — '+{index:'첫 연도=100',z:'표준화(z점수)',raw:'원값'}[mode]+(S.rateDen?' · 10만 명당':'');
+  $('#trTitle').textContent='추세 비교 — '+{index:'첫 연도=100',z:'표준화(z점수)',raw:'원값'}[mode]+(S.rateDen?' · '+rateLabel():'');
   const view=CTL.tr.prep(labels);
-  S.tr=new Chart($('#trend'),{type:'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const r=c.dataset._raw[c.dataIndex]; return `${c.dataset.label}: ${c.parsed.y==null?'–':fmt.format(c.parsed.y)}${mode!=='raw'&&r!=null?' (원값 '+fmt.format(r)+')':''}`}}}},
+  S.tr=new Chart($('#trend'),{type:'line',plugins:[evLines],data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+    plugins:{evLines:{on:$('#tEv').checked},legend:{display:false},tooltip:{callbacks:{label:c=>{const r=c.dataset._raw[c.dataIndex]; return `${c.dataset.label}: ${c.parsed.y==null?'–':fmt.format(c.parsed.y)}${mode!=='raw'&&r!=null?' (원값 '+fmt.format(r)+')':''}`}}}},
     scales:{x:{min:view?view[0]:undefined,max:view?view[1]:undefined,ticks:{color:fg},grid:{display:false},border:{color:css('--line-strong')}},y:{beginAtZero:false,ticks:{color:fg,callback:v=>fmt.format(v)},grid:{color:grid},border:{display:false}}}}});
   CTL.tr.after(S.tr);
 }
@@ -1004,7 +1055,7 @@ function sRange(){ let a=+$('#sY0').value||0, b=+$('#sY1').value||9999; return a
 function yearPool(){ // 상관관계 분석 탭과 같은 목록·번호 (켜진 연도 계열, 비율 환산 반영)
   const den=S.rateDen?S.corr.find(c=>c.name===S.rateDen&&c.axis==='연도'):null;
   let act=S.corr.filter(c=>c.on&&c.axis==='연도');
-  if(den) act=act.filter(c=>c!==den).map(c=>{ if(den.src&&c.src===den.src) return c; const pts=new Map(); for(const [k,v] of c.pts){const d=den.pts.get(k); if(d) pts.set(k,v/d*1e5)} return {...c,name:c.name+' (10만 명당)',pts}});
+  if(den) act=applyRate(act,den);
   return act.map((c,i)=>({...c,no:i+1}));
 }
 function grid(series,mode){ // 연도 격자 위의 값 (빈 칸 = null), 처리 적용
@@ -1038,7 +1089,7 @@ function fillSel(sel,pool,keep,allowNone){const cur=keep??sel.value; sel.innerHT
 /* 탭 전환·공통 렌더 */
 function renderMethods(){
   const pool=yearPool(); S.pool=pool;
-  $('#sPool').innerHTML=pool.length?`연도 계열 <b>${pool.length}</b>개 <span class="crumb">(상관관계 분석 탭에서 켠 계열${S.rateDen?' · 10만 명당 환산':''})</span>`:'<span class="crumb">아직 계열이 없습니다 — 왼쪽 목록에서 통계를 체크하고 "체크한 통계로 모으기"를 누르세요</span>';
+  $('#sPool').innerHTML=pool.length?`연도 계열 <b>${pool.length}</b>개 <span class="crumb">(상관관계 분석 탭에서 켠 계열${S.rateDen?' · '+rateLabel()+' 환산':''})</span>`:'<span class="crumb">아직 계열이 없습니다 — 왼쪽 목록에서 통계를 체크하고 "체크한 통계로 모으기"를 누르세요</span>';
   document.querySelectorAll('#stabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===S.mtab));
   document.querySelectorAll('#v-stat .mpane').forEach(p=>p.hidden=p.dataset.m!==S.mtab);
   $('#resN').textContent=S.results.length;
@@ -1438,6 +1489,8 @@ $('#btnAddCorr').onclick=addCurrentToCorr;
 $('#btnClearCorr').onclick=()=>{S.corr=[];S.sets=[];S.rateDen='';renderCorr()};
 ['#cMethod','#cDiff','#cLag','#cAxis','#tNorm','#cY0','#cY1'].forEach(s=>$(s).onchange=renderCorr); $('#cLag').oninput=renderCorr;
 $('#cRate').onchange=()=>{S.rateDen=$('#cRate').value; S.sel=[0,1]; renderCorr()};
+$('#tEv').onchange=()=>renderCorr();
+$('#cRateK').onchange=()=>{S.rateK=+$('#cRateK').value||1e5; renderCorr()};
 $('#btnMulti').onclick=()=>runMulti();
 $('#btnStatGo').onclick=()=>runMulti(true);
 $('#btnToStat').onclick=()=>showTab('stat');
@@ -1575,7 +1628,34 @@ async function fireUpdate(){
     UO.env=amb?'<span class="bad">실행 여부를 확인하지 못했습니다</span> — 다시 누르기 전에 ‘상태 새로고침’으로 진행 중인지 확인하세요.':mcpErr(e) }
   renderDlg();
 }
-function openUpdDlg(){ $('#updDlg').hidden=false; renderDlg(); precheck(); setTimeout(()=>$('#updClose').focus(),0) }
+/* 부처 자료 갱신: 예약 작업 하나(AUTO.ext_trigger_id)에 lib=<부처> 를 넘겨 부처마다 따로 실행. 상태는 db ops/last_run_<부처> */
+const EXT_MANUAL={policy:'연표 CSV(data/source/ext/policy)를 고친 뒤 빌드', kostat:'인구총조사 엑셀을 data/source/ext/kostat 에 넣고 빌드'};
+UO.ext={}; UO.extSub=new Set(); UO.extArmed=''; UO.extFired={}; UO.extSel='';
+function extLibs(){ const L=(AUTO&&AUTO.ext_libs)||{}; const I=(S.ext&&S.ext.libs)||{}; const keys=[...new Set([...Object.keys(L),...Object.keys(I)])]; return keys.map(k=>({k,name:(L[k]&&L[k].name)||(I[k]&&I[k].name)||k,info:I[k]||null})) }
+function subExt(){ if(!UO.db) return; for(const {k} of extLibs()){ if(UO.extSub.has(k)) continue; UO.extSub.add(k);
+  UO.db.doc('ops/last_run_'+k).onSnapshot(sn=>{ UO.ext[k]=sn.exists?sn.data():null; renderExt() },()=>{}) } }
+function renderExt(){ const host=$('#extRows'); if(!host) return; subExt();
+  const can=!!(UO.mcp&&AUTO&&AUTO.ext_trigger_id);
+  host.innerHTML=extLibs().map(({k,name,info})=>{ const d=UO.ext[k]||{}, st=d.status||'', run=RUNNING.has(st)&&(Date.now()-new Date(d.updated||0).getTime()<3*3600e3);
+    const yr=info?`${info.year_min??'–'}~${info.year_max??'–'} · 장표 ${info.patterns}개 · 조립 ${esc(fmtT(info.built_at).slice(0,10))}`:'아직 자료 없음';
+    const s2=st?`<span class="${run?'run':st==='done'||st==='no_new_data'?'ok':'bad'}">${esc(ST_NM[st]||st)}</span>${d.message?' — '+esc(d.message):''} · ${esc(when(d.updated||d.finished))}`:'갱신 기록 없음';
+    const man=EXT_MANUAL[k], recent=Date.now()-(UO.extFired[k]||0)<10*60e3;
+    const btn=man?`<span class="dlgnote" title="${esc(man)}">수동</span>`:`<button class="btn small${UO.extArmed===k?' warn':''}" type="button" data-ext="${k}" ${!can||run||recent?'disabled':''}>${UO.extArmed===k?'확인 — 실행':run?'진행 중':'갱신'}</button>`;
+    return `<div class="extrow"><span class="nm"><b>${esc(name)}</b><br><span class="dlgnote">${yr}</span></span><span class="st">${s2}</span>${btn}</div>` }).join('');
+  host.querySelectorAll('[data-ext]').forEach(b=>b.onclick=()=>fireExt(b.dataset.ext));
+  if(!can) $('#extEnv').innerHTML=UO.mcp?'부처 자료 예약 작업이 아직 연결되지 않았습니다 — 아래 Claude 앱 프롬프트로 진행하세요.':'이 화면에서는 버튼으로 실행할 수 없습니다 — 아래 Claude 앱 프롬프트로 진행하세요.';
+  const sel=UO.extSel||(extLibs().find(x=>!EXT_MANUAL[x.k])||{}).k||'';
+  $('#extPrompt').value=((AUTO&&AUTO.ext_app_prompt)||'').replace(/\{lib\}/g,sel); }
+async function fireExt(lib){
+  if(UO.extArmed!==lib){ UO.extArmed=lib; UO.extSel=lib; renderExt(); setTimeout(()=>{ if(UO.extArmed===lib){UO.extArmed='';renderExt()} },8000); return }
+  UO.extArmed=''; UO.extFired[lib]=Date.now(); renderExt();
+  const runId=`panel-${lib}-`+new Date().toISOString().replace(/[-:]/g,'').slice(0,15);
+  try{ await UO.mcp.callTool(SRV,'fire_trigger',{trigger_id:AUTO.ext_trigger_id,text:`lib=${lib} · 패널 '부처 자료 갱신' 버튼으로 실행 · run_id=${runId} · 패널 버전 ${(window.TAAS_BUILD||{}).commit||''} · 요청 ${new Date().toISOString()}`},{cache:false});
+    $('#extEnv').innerHTML=`<span class="run">${esc(lib)} 갱신을 요청했습니다.</span> 진행 상태가 이 줄에 표시됩니다.` }
+  catch(e){ UO.extFired[lib]=0; $('#extEnv').innerHTML=mcpErr(e) }
+  renderExt() }
+$('#extCopy').onclick=async()=>{ const t=$('#extPrompt'); try{ await navigator.clipboard.writeText(t.value); $('#extCopied').textContent='복사했습니다.' }catch(e){ t.focus(); t.select(); $('#extCopied').textContent='선택했습니다 — Ctrl+C' } };
+function openUpdDlg(){ $('#updDlg').hidden=false; renderDlg(); renderExt(); precheck(); setTimeout(()=>$('#updClose').focus(),0) }
 $('#updClose').onclick=()=>{$('#updDlg').hidden=true; $('#btnUpd').focus()};
 $('#updDlg').addEventListener('click',e=>{ if(e.target.id==='updDlg') $('#updClose').click() });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#updDlg').hidden) $('#updClose').click() });
@@ -1586,7 +1666,7 @@ function initOnlineUpd(){
   if(!isOnline()) return; renderUpdOnline();
   const cl=window.claude; if(!cl||!cl.use){ UO.dbOk=false; return }
   cl.use('mcp').then(m=>{UO.mcp=m; renderUpdOnline()},()=>{});
-  cl.use('db').then(db=>{ if(!db){UO.dbOk=false; renderUpdOnline(); return}
+  cl.use('db').then(db=>{ if(!db){UO.dbOk=false; renderUpdOnline(); return} UO.db=db; subExt();
     const tm=setTimeout(()=>{ if(UO.dbOk===null){UO.dbOk=false; renderUpdOnline()} },10000);
     db.doc('ops/last_run').onSnapshot(sn=>{ clearTimeout(tm); UO.dbOk=true; UO.doc=sn.exists?sn.data():null; renderUpdOnline() }, ()=>{ clearTimeout(tm); UO.dbOk=false; renderUpdOnline() }) },()=>{UO.dbOk=false});
 }
@@ -1598,10 +1678,10 @@ window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD,UO}); // 검증·자동화용
 /* ---------- 시작: 라이브러리 폴더 안이면 바로, 아니면 예시 데이터 ---------- */
 function startWith(){ renderStat();renderTree();renderTech();renderCorr();
   if(S.index){const f=S.index.patterns.find(p=>hasData(p.pid)&&p.pid===7019)||S.index.patterns.find(p=>hasData(p.pid));if(f)selectPattern(f.pid)} }
-if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local';startWith()}
+if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local';mergeExt(window.TAAS_EXT);startWith()}
 else if(window.TAAS_ONLINE){ S.mode='online'; $('#btnOpen').hidden=$('#btnOpenFiles').hidden=true; $('#tree').innerHTML='<div class="sub">장표 목록을 불러오는 중…</div>';
-  initOnlineUpd(); fetch('index.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(idx=>{S.index=idx;startWith();renderUpdOnline()})
+  initOnlineUpd(); fetch('index.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(async idx=>{S.index=idx; mergeExt(await fetch('ext_index.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null)); startWith();renderUpdOnline()})
     .catch(e=>{ $('#tree').innerHTML='<div class="sub">장표 목록을 불러오지 못했습니다 ('+esc(String(e))+'). 새로 고침해 보세요.</div>' }) }
-else { if(window.TAAS_SAMPLE){S.index=window.TAAS_SAMPLE.index;S.mode='sample'} startWith() }
+else { if(window.TAAS_SAMPLE){S.index=window.TAAS_SAMPLE.index;S.mode='sample';mergeExt(window.TAAS_SAMPLE.ext)} startWith() }
 })();
 </script>

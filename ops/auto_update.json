@@ -8,5 +8,10 @@
  "app_prompt": "ops/APP_PROMPT.md",
  "status_doc": "ops/last_run",
  "taas_url": "https://taas.koroad.or.kr/sta/acs/exs/typical.do?menuId=WEB_KMP_OVT_UAS_ASA",
- "note": "예약 작업은 사용자 PC가 필요(브라우저 수집). PC·Claude 앱이 꺼져 있으면 상태 needs_app 과 함께 Claude 앱에 붙일 프롬프트를 패널에 남김"
+ "note": "예약 작업은 사용자 PC가 필요(브라우저 수집). PC·Claude 앱이 꺼져 있으면 상태 needs_app 과 함께 Claude 앱에 붙일 프롬프트를 패널에 남김",
+ "ext_task_name": "TAAS 부처 자료 갱신",
+ "ext_trigger_id": "",
+ "ext_runbook": "ops/EXT_UPDATE.md",
+ "ext_app_prompt": "ops/APP_PROMPT_EXT.md",
+ "ext_status_doc": "ops/last_run_<lib>"
 }
