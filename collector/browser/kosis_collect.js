@@ -24,7 +24,14 @@
         const c = r && r.contentWindow.document.getElementById('iframe_centerMenu1');
         const W = c && c.contentWindow;
         const fm = W && W.document.forms.ParamInfo;
-        if (fm && fm.fieldList && fm.fieldList.value && W.$ && W.$.ui && W.$.ui.fancytree && W.document.getElementById('fancytree_0')) return W;
+        if (fm && fm.fieldList && fm.fieldList.value && W.$ && W.$.ui && W.$.ui.fancytree && W.document.getElementById('fancytree_0')) {
+          // 항목·분류 트리가 모두 채워질 때까지 (classAllArr 의 분류 수만큼)
+          let nCls = 0; try { nCls = JSON.parse(fm.classAllArr.value || '[]').length } catch (e) { }
+          const cnt = id => { try { const t = W.$.ui.fancytree.getTree('#' + id); let n = 0; t.visit(() => { n++ }); return n } catch (e) { return 0 } };
+          let ok = cnt('fancytree_0') > 0;
+          for (let i = 1; i <= nCls; i++) ok = ok && cnt('fancytree_' + i) > 0;
+          if (ok) { await sleep(500); return W }
+        }
       } catch (e) { }
     }
     throw new Error('통계표 화면을 열지 못했습니다: ' + orgId + '/' + tblId);
