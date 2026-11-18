@@ -1,12 +1,13 @@
 # 이어서 할 일 (작업 인계)
 
 다음 세션이 이 파일부터 읽고 이어 갑니다. 끝낸 항목은 지우지 말고 ✅ 로 표시하고 날짜를 남깁니다.
-마지막 갱신: 2026-11-18 (진행 중: 브랜치 claude/v1.6-panel)
+마지막 갱신: 2026-11-18 (v1.6 병합·패널 재게시까지 마침)
 
-## 지금 상태 (v1.5, PR #11 병합)
-- 부처별 외부 라이브러리 구조 완성: kostat(9001·9002) · police(9003) · policy(9901, 제도 18개 더미 + events 25건) 반영.
-- **수치 미수집**: mois 9101·9102, molit 9201~9205, police 9301~9304 — KOSIS 가 2026-11-17 반복 접속을 차단(사용자 PC IP).
-- 패널 아티팩트(https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune) v1.5 로 다시 게시함(version 11).
+## 지금 상태 (v1.6)
+- 부처별 외부 라이브러리: kostat(9001·9002) · police(9003, 9302 성별 2005~2021, 9305~9308 공공데이터) · policy(9901 + events 25건) 반영.
+- 패널 분석 묶음 6종(상관관계 분석 탭) — '주행거리당'은 9205 수집 전까지 꺼짐. 어린이·고령 묶음은 9102(주민등록) 가 생기면 자동으로 그것을 분모로 씀.
+- **수치 미수집(KOSIS)**: mois 9101·9102, molit 9201~9205, police 9301·9303·9304 (9302 는 2019~ 를 KOSIS 로 보충) — KOSIS 가 2026-11-17 반복 접속을 차단, 사용자가 OpenAPI 키를 한도 리셋 뒤 알려 주기로 함.
+- 패널 아티팩트(https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune) — 게시할 때 Artifact read 후, 이전 게시 파일(index.json·online/*)도 path 로 read 해야 publish 가 통과함.
 
 ## 다음 할 일 (순서대로)
 1. **KOSIS OpenAPI 키로 수집** — 사용자가 키를 알려 주면(주간 한도 리셋 뒤) `ops/EXT_UPDATE.md` 3단계를 부처마다 따로: `KC.run(jobs, {apiKey})`.
@@ -20,4 +21,5 @@
 4. **PC 반영** — PC 저장소(바탕화면\Claude_Projects\TAAS_Analysis_for_Safety)는 v1.4. 원본 폴더 구조가 바뀌어 `python ops/pc_sync.py` 후 `python build.py`(전체 조립 약 5분) 필요. 연결 셸(device_bash)은 인터넷이 안 돼 git fetch 불가 → 사용자가 PC 에서 `업데이트.bat` 또는 위 명령 실행.
 
 ## 진행 기록
+- 2026-11-18 v1.6 경찰청 공공데이터 4종 + 9302 보충, 패널 분석 묶음, 이 인계 파일
 - 2026-11-17 v1.5 구조·연표·패널(비율 환산 배율, 제도 시행 세로선·빠른 선택, 부처 갱신 목록) — PR #11
