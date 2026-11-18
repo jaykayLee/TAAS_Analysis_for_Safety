@@ -357,9 +357,16 @@ def lib_police():
             t.put([k], "소지자[명]", r["year"], r["v"])
         out.append(t.rec())
     A, B = load("police", "lic_sex_2005"), load("police", "lic_sex")
-    if A or B:
+    G = SRC / "police" / "datagokr" / "운전면허소지자_성별_15048417.csv"
+    if A or B or G.exists():
         t = Table(9302, f"{LIC} (성별)", "police", "운전면허", ["성별"],
-                  ["출처: 경찰청 「운전면허소지자현황」 — KOSIS 성별(TX_13201_A001, ~2018) · 성별(DT_13201_A004, 2019~)", "보유율(%)은 2018년까지 표에 있는 값"], kurl("police", "lic_sex"))
+                  ["출처: 경찰청 「운전면허소지자현황」 — KOSIS 성별(TX_13201_A001, ~2018) · 성별(DT_13201_A004, 2019~); KOSIS 자료가 없는 연도는 공공데이터포털 「운전면허소지자 성별 현황」(15048417, 2005~2021)",
+                   "보유율(%)은 2018년까지 KOSIS 표에 있는 값"], kurl("police", "lic_sex"))
+        if G.exists():  # 공공데이터포털 값을 먼저 넣고 KOSIS 값이 있으면 덮어씀
+            for r in rows_csv(G):
+                y = int(r["연도"]); m_, f_ = num(r["남"]), num(r["여"])
+                t.put(["남자"], "소지자[명]", y, m_); t.put(["여자"], "소지자[명]", y, f_)
+                t.put(["계"], "소지자[명]", y, (m_ or 0) + (f_ or 0))
         for r in A or []:
             if r["C1"] == "보유율":
                 t.put(["계"], "보유율[%]", r["year"], r["v"])
