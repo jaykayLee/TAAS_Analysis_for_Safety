@@ -225,6 +225,7 @@ table.grid td{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
 .appbox[open]{border-color:var(--amber)}
 .appbox summary{cursor:pointer;font-weight:600;font-size:13px}
 .extbox{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.presetbar{margin:4px 0 8px}.presetbar .presets{display:flex;flex-wrap:wrap;gap:6px}.presetbar .btn:disabled{opacity:.45}
 .extbox h4{margin:0 0 6px;font-size:13px}
 .extrow{display:grid;grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
 .extrow .nm b{font-size:13px}
@@ -338,6 +339,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
         <div class="field"><label for="cRate" title="고른 계열(분모)로 나머지 계열을 나눕니다. 인구(9001·9102)·자동차 등록대수(9201)·운전면허 소지자(9301~)·주행거리(9205)·도로 연장(9203) 등">비율 환산 (분모 계열)</label><select id="cRate"><option value="">없음</option></select></div>
         <div class="field"><label for="cRateK">배율</label><select id="cRateK"><option value="100000" selected>× 10만</option><option value="10000">× 1만</option><option value="1000">× 1천</option><option value="100">× 100 (%)</option><option value="1">× 1</option><option value="100000000">× 1억 (대·km 등)</option></select></div>
       </div>
+      <div class="field presetbar"><label>분석 묶음 — 누르면 관련 통계·분모·배율·개입 연도를 한 번에 맞춥니다</label><span class="presets" id="cPresets"></span><span class="hint" id="cPresetNote"></span></div>
       <div class="note" id="corrNote">연도별 시계열은 대부분 같은 감소 추세를 공유해 원값끼리는 상관이 과대하게 나옵니다. 기본값인 1차 차분은 해마다의 증감끼리 비교합니다. 2005~2025년은 최대 21개 점이므로 p값을 함께 보세요.</div>
       <div class="card" id="setsCard" hidden><h3>선택한 통계 — 조건 바꾸기</h3><div class="sets" id="sets"></div>
         <div class="hint">축마다 '합계/특정 값'으로 고정하거나 '▦ 계열로 나누기'를 고르면 그 축의 값별로 계열이 생깁니다. 인구 장표는 연령구분(전체·어린이·일반·노인)으로 나눠 둡니다.</div></div>
@@ -496,7 +498,7 @@ async function openFiles(list){
     S.files=new Map(); for(const f of files){const m=f.name.match(/^p(\d+)\.json(\.gz)?$/); if(m) S.files.set(+m[1],f)}
     S.index=idx; S.cache=new Map(); S.mode='live'; S.corr=[]; S.sets=[];
     const exF=files.find(f=>/(^|\/)ext_index\.json$/.test(f.webkitRelativePath||f.name)); if(exF) mergeExt(JSON.parse(await exF.text()));
-    renderStat(); renderTree(); renderTech(); renderCorr();
+    renderStat(); renderTree(); renderTech(); renderCorr(); renderPresets();
     const first=idx.patterns.find(p=>p.pid===7019&&S.files.has(7019))||idx.patterns.find(p=>S.files.has(p.pid));
     if(first) selectPattern(first.pid);
     toast(`장표 ${S.files.size}개를 불러왔습니다.`);
@@ -852,7 +854,7 @@ const POP_PIDS=new Set([9001,9002,9101,9102]);
 function rateLabel(){ const den=S.corr.find(c=>c.name===S.rateDen); const pop=den&&POP_PIDS.has(den.pid); return S.rateK===100?'백분율(%)':S.rateK===1?'비율':`${RK[S.rateK]||S.rateK}${pop?' 명':''}당` }
 function applyRate(act,den){ const k=S.rateK||1e5, lb=rateLabel();
   return act.filter(c=>c!==den).map(c=>{ if(den.src&&c.src===den.src) return c; /* 같은 장표의 다른 구분(예: 연령구분)은 나누지 않음 */
-    if(/\[0\/1\]/.test(c.name)) return c; /* 제도 시행 더미(0/1)는 나누지 않음 */
+    if(/\[0\/1\]/.test(c.name)||c.norate) return c; /* 제도 시행 더미(0/1)·분석 묶음에서 '나누지 않음'으로 넣은 계열(시설·단속 등) */
     const pts=new Map(); for(const [y,v] of c.pts){const d=den.pts.get(y); if(d) pts.set(y,v/d*k)} return {...c,name:c.name+` (${lb})`,pts}}) }
 function renderCorr(){
   $('#corrN').textContent=S.corr.length;
@@ -929,9 +931,47 @@ function seriesOfSet(T,P){
 async function rebuildSet(T){
   const P=await getPattern(T.pid); if(!P) return;
   const old=new Map(S.corr.filter(c=>c.src===T.id).map(c=>[c.name,c.on])), at=S.corr.findIndex(c=>c.src===T.id);
-  const neu=seriesOfSet(T,P).map(c=>({...c,on:old.has(c.name)?old.get(c.name):true}));
+  const neu=seriesOfSet(T,P).map(c=>({...c,on:old.has(c.name)?old.get(c.name):true,norate:!!T.norate}));
   S.corr=S.corr.filter(c=>c.src!==T.id); S.corr.splice(at<0?S.corr.length:at,0,...neu);
 }
+/* ---------- 분석 묶음 (노출량 사고율·정책 효과 프리셋) ----------
+   items: {pid, m: 수치항목 정규식, fix: {축 이름: 값}} — 같은 장표를 여러 번 넣을 수 있음
+   den: 분모 계열(이름 정규식, 앞에서부터 있는 것), k: 배율, its: 중단 시계열 개입 연도 */
+const PRESETS=[
+  {id:'exposure',name:'노출량 — 사고·사망 ÷ 자동차 등록대수',items:[{pid:1,fix:{분석지표:'교통사고건수(건)',세부1:'지표'}},{pid:1,fix:{분석지표:'교통사고사망자(명)',세부1:'지표'}},{pid:1,fix:{분석지표:'자동차등록대수(대)',세부1:'지표'}}],den:[/자동차등록대수/],k:1e4,
+    note:'TAAS 주요 교통지표의 자동차 등록대수로 나눈 자동차 1만 대당 사고·사망. 분모를 바꾸려면 비율 환산에서 고르세요.'},
+  {id:'vkt',name:'주행거리당 — 사고·사망 ÷ 대·km',need:[9205],items:[{pid:1,fix:{분석지표:'교통사고건수(건)',세부1:'지표'}},{pid:1,fix:{분석지표:'교통사고사망자(명)',세부1:'지표'}},{pid:9205,m:/연간 주행거리/,fix:{시도:'전국',용도:'계',차종:'계'}}],den:[/연간 주행거리/],k:1e8,
+    note:'자동차 주행거리(9205, 2012~)로 나눈 1억 대·km 당 사고·사망. 주행거리 단위(천km 등)는 수치항목 이름을 확인하세요.'},
+  {id:'drunk',name:'음주 — 사고 vs 단속',items:[{pid:7159,m:/^사고/},{pid:7159,m:/^사망/},{pid:9307,m:/단속/,fix:{'위반 횟수':'계'}},{pid:9307,m:/단속/,fix:{'위반 횟수':'재범(2회 이상)'}}],its:2019,
+    note:'음주운전 사고(TAAS)와 단속 건수(경찰청). 개입 연도 2019 = 제2 윤창호법(0.03%). 단속 건수는 단속 활동량에도 좌우됩니다.'},
+  {id:'speed',name:'과속 — 사고 vs 무인카메라',items:[{pid:7051,m:/^사고/,fix:{'가해운전자(1당) 법규위반':'과속'}},{pid:7051,m:/^사망/,fix:{'가해운전자(1당) 법규위반':'과속'}},{pid:7051,m:/^사고/,fix:{'가해운전자(1당) 법규위반':'신호위반'}},{pid:9306,m:/누적/,fix:{시도:'전국','카메라 구분':'전체'}}],its:2021,
+    note:'법규위반이 과속·신호위반인 사고(TAAS 7051, 2005~)와 무인 단속카메라 누적 대수(현존 카메라의 설치연도 기준). 개입 연도 2021 = 안전속도 5030.'},
+  {id:'child',name:'어린이 — 인구 10만 명당 사고·보호구역',items:[{pid:7196,m:/^사고/},{pid:7196,m:/^사망/},{pid:9102,opt:1,m:/^인구/,fix:{시도:'전국',연령구분:'어린이 0~12세'}},{pid:9001,m:/연간보간/,fix:{시도:'전국',연령구분:'어린이 0~12세'}},{pid:9003,m:/.*/,fix:{구분:'지정개소[개소]'},norate:1},{pid:9306,m:/누적/,fix:{시도:'전국','카메라 구분':'어린이보호구역(추정)'},norate:1}],
+    den:[/주민등록인구.*어린이/,/연령구분별 인구.*어린이/],k:1e5,its:2020,note:'어린이 사고 ÷ 어린이 인구(주민등록 9102 가 있으면 그것, 없으면 인구총조사 보간). 개입 연도 2020 = 민식이법.'},
+  {id:'elderly',name:'고령 — 노인 사고 vs 면허 반납',items:[{pid:7240,m:/^사고/},{pid:7240,m:/^사망/},{pid:9305,m:/반납자/,fix:{시도:'전국',반납자:'65세 이상'},norate:1},{pid:9102,opt:1,m:/^인구/,fix:{시도:'전국',연령구분:'노인 65세 이상'}},{pid:9001,m:/연간보간/,fix:{시도:'전국',연령구분:'노인 65세 이상'}}],
+    den:[/주민등록인구.*노인/,/연령구분별 인구.*노인/],k:1e5,its:2019,note:'노인 사고·면허 반납 ÷ 노인 인구. 개입 연도 2019 = 75세 이상 적성검사 주기 단축·반납 지원 확대.'}];
+function presetOk(pr){ return pr.items.every(it=>it.opt||hasData(it.pid)) && (pr.need||[]).every(hasData) }
+function renderPresets(){ const host=$('#cPresets'); if(!host||!S.index) return;
+  host.innerHTML=PRESETS.map(pr=>{const ok=presetOk(pr), miss=pr.items.filter(it=>!it.opt&&!hasData(it.pid)).map(it=>it.pid).concat((pr.need||[]).filter(p=>!hasData(p)));
+    return `<button class="btn small" type="button" data-pr="${pr.id}" ${ok?'':'disabled'} title="${esc(pr.note)}${ok?'':' — 아직 자료 없음: 장표 '+miss.join(', ')}">${esc(pr.name)}</button>`}).join('');
+  host.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>runPreset(b.dataset.pr)) }
+async function runPreset(id){
+  const pr=PRESETS.find(p=>p.id===id); if(!pr) return;
+  S.corr=[]; S.sets=[]; S.rateDen=''; S.sel=[0,1]; CTL.tr.reset(true); CTL.tr.hidden.clear(); CTL.sc.reset(true); showTab('corr'); $('#slist').innerHTML='<div class="empty">불러오는 중…</div>';
+  const seen=new Set();
+  for(const it of pr.items){ if(it.opt&&!hasData(it.pid)) continue; const P=await getPattern(it.pid); if(!P) continue;
+    const T=newSet(it.pid,P);
+    if(it.m){const i=P.measures.findIndex(x=>it.m.test(x)); if(i>=0) T.measure=i}
+    for(const [nm,v] of Object.entries(it.fix||{})){ const d=P.dim_names.indexOf(nm); if(d<0) continue; const j=P.dicts[d].indexOf(v); if(j<0) continue; if(T.split===d) T.split=null; T.fix[d]=j }
+    if(it.norate) T.norate=true;
+    S.sets.push(T); await rebuildSet(T) }
+  // 9102 가 있으면 9001(보간)은 끔
+  if(pr.items.some(it=>it.pid===9102)&&hasData(9102)) S.corr.forEach(c=>{ if(c.pid===9001) c.on=false });
+  const ys=S.corr.flatMap(c=>[...c.pts.keys()].map(Number)); if(ys.length){$('#cY0').value=$('#sY0').value=Math.min(...ys);$('#cY1').value=$('#sY1').value=Math.max(...ys)}
+  if(pr.den){ for(const re of pr.den){ const c=S.corr.find(c=>c.on&&re.test(c.name)); if(c){S.rateDen=c.name;break} } }
+  S.rateK=pr.k||1e5; if(pr.its) $('#iYear').value=pr.its;
+  $('#cAxis').innerHTML='<option>연도</option>'; $('#cAxis').value='연도';
+  $('#cPresetNote').textContent=pr.note; renderCorr(); toast(`'${pr.name}' — 계열 ${S.corr.length}개${S.rateDen?' · 분모 '+S.rateDen:''}`) }
 async function runMulti(stay){
   const pids=[...S.checked].filter(p=>meta(p)&&hasData(p)); if(!pids.length) return toast('체크한 통계가 없습니다.',true);
   S.corr=[]; S.sets=[]; S.rateDen=''; S.sel=[0,1]; CTL.tr.reset(true); CTL.tr.hidden.clear(); CTL.sc.reset(true);
@@ -1676,7 +1716,7 @@ if(!window.TAAS_ONLINE){ updStatus(); setInterval(()=>{ if(!UPD.poll||!UPD.st||!
 
 window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD,UO}); // 검증·자동화용
 /* ---------- 시작: 라이브러리 폴더 안이면 바로, 아니면 예시 데이터 ---------- */
-function startWith(){ renderStat();renderTree();renderTech();renderCorr();
+function startWith(){ renderStat();renderTree();renderTech();renderCorr();renderPresets();
   if(S.index){const f=S.index.patterns.find(p=>hasData(p.pid)&&p.pid===7019)||S.index.patterns.find(p=>hasData(p.pid));if(f)selectPattern(f.pid)} }
 if(window.TAAS_INDEX){S.index=window.TAAS_INDEX;S.mode='local';mergeExt(window.TAAS_EXT);startWith()}
 else if(window.TAAS_ONLINE){ S.mode='online'; $('#btnOpen').hidden=$('#btnOpenFiles').hidden=true; $('#tree').innerHTML='<div class="sub">장표 목록을 불러오는 중…</div>';

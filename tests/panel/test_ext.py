@@ -60,6 +60,17 @@ async def check(pg, label, errs, online=False):
     await pg.evaluate("()=>{const b=[...document.querySelectorAll('#evPresets [data-y]')].find(x=>x.dataset.y==='2021'); b.click()}")
     yv = await pg.input_value("#iYear"); assert yv == "2021", yv
     out["evWarn"] = await pg.inner_text("#evWarn")
+    # 분석 묶음(프리셋): 켜진 묶음마다 계열이 생기고 오류가 없어야 함
+    pr = await pg.evaluate("()=>[...document.querySelectorAll('#cPresets [data-pr]')].filter(b=>!b.disabled).map(b=>b.dataset.pr)")
+    out["presets"] = {}
+    for k in pr:
+        await pg.evaluate(f"()=>document.querySelector('[data-pr={k}]').click()"); await pg.wait_for_timeout(2500)
+        r = await pg.evaluate("()=>{const D=TAAS_DEBUG(); const p=D.yearPool(); return {n:p.length, den:D.S.rateDen, rated:p.filter(c=>/당\)$/.test(c.name)).length}}")
+        assert r["n"] >= 2, (k, r)
+        out["presets"][k] = r
+    if label != "sample":  # 예시판은 일부 장표만 실어 묶음 대부분이 꺼짐
+        assert {"exposure", "drunk", "speed", "child", "elderly"} <= set(pr), pr
+        assert out["presets"]["child"]["rated"] == 2, out["presets"]["child"]  # 사고·사망만 나눔(보호구역·카메라는 그대로)  # 사고·사망만 나눔(보호구역·카메라는 그대로)
     if online:
         await pg.evaluate("()=>{document.getElementById('updDlg').hidden=false}")
         await pg.evaluate("()=>document.getElementById('btnUpd').click()")

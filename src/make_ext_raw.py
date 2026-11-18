@@ -9,14 +9,15 @@
   kostat  통계청(국가데이터처)   9001·9002  인구총조사 연령별 인구 (data/source/ext/kostat/*.xlsx → make_pop_raw)
   mois    행정안전부             9101·9102  주민등록인구 5세별 · 연령구분별(어린이·일반·노인)
   molit   국토교통부             9201~9205  자동차 등록대수 · 이륜차 신고대수 · 도로 연장 · 평균 일교통량 · 자동차 주행거리
-  police  경찰청                 9003, 9301~9304  어린이보호구역 · 운전면허 소지자(면허종별·성별·연령대별·시도별)
+  police  경찰청                 9003, 9301~9308  어린이보호구역 · 운전면허 소지자(면허종별·성별·연령대별·시도별) · 면허 자진반납 · 무인단속카메라 · 음주운전 단속 · 교통법규 위반 단속
+                                 (9305~9308 은 공공데이터포털 파일: data/source/ext/police/datagokr)
   policy  제도 시행 연표          9901  교통안전 제도 시행(연도 더미) + events.json(패널의 개입 연도 빠른 선택·그래프 표시)
 
 수집 자료(KOSIS) 형식: data/source/ext/<lib>/kosis/<key>.csv.gz — 열 PRD_DE, C1_NM…C4_NM, ITM_NM, UNIT_NM, DT
 (OpenAPI 의 긴 형식과 같음. 수집기: collector/browser/kosis_collect.js, 목록: ops/ext_sources.json)
 수집 자료가 없는 장표는 건너뜁니다(장표 목록에도 넣지 않음).
 """
-import csv, gzip, io, json, re, sys, time
+import collections, csv, gzip, io, json, re, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -356,9 +357,16 @@ def lib_police():
             t.put([k], "소지자[명]", r["year"], r["v"])
         out.append(t.rec())
     A, B = load("police", "lic_sex_2005"), load("police", "lic_sex")
-    if A or B:
+    G = SRC / "police" / "datagokr" / "운전면허소지자_성별_15048417.csv"
+    if A or B or G.exists():
         t = Table(9302, f"{LIC} (성별)", "police", "운전면허", ["성별"],
-                  ["출처: 경찰청 「운전면허소지자현황」 — KOSIS 성별(TX_13201_A001, ~2018) · 성별(DT_13201_A004, 2019~)", "보유율(%)은 2018년까지 표에 있는 값"], kurl("police", "lic_sex"))
+                  ["출처: 경찰청 「운전면허소지자현황」 — KOSIS 성별(TX_13201_A001, ~2018) · 성별(DT_13201_A004, 2019~); KOSIS 자료가 없는 연도는 공공데이터포털 「운전면허소지자 성별 현황」(15048417, 2005~2021)",
+                   "보유율(%)은 2018년까지 KOSIS 표에 있는 값"], kurl("police", "lic_sex"))
+        if G.exists():  # 공공데이터포털 값을 먼저 넣고 KOSIS 값이 있으면 덮어씀
+            for r in rows_csv(G):
+                y = int(r["연도"]); m_, f_ = num(r["남"]), num(r["여"])
+                t.put(["남자"], "소지자[명]", y, m_); t.put(["여자"], "소지자[명]", y, f_)
+                t.put(["계"], "소지자[명]", y, (m_ or 0) + (f_ or 0))
         for r in A or []:
             if r["C1"] == "보유율":
                 t.put(["계"], "보유율[%]", r["year"], r["v"])
@@ -400,6 +408,106 @@ def lib_police():
             if s:
                 t.put([s], "소지자[명]", r["year"], r["v"], add=r["C2"] in ("경기남부", "경기북부"))
         out.append(t.rec(sido_order))
+    out += police_datagokr()
+    return out
+
+
+DG = SRC / "police" / "datagokr"
+DG_URL = "https://www.data.go.kr/data/{}/fileData.do"
+
+
+def rows_csv(f):
+    return list(csv.DictReader(l for l in open(f, encoding="utf-8") if not l.startswith("#")))
+
+
+def police_datagokr():
+    """공공데이터포털 파일데이터(경찰청) → 9305~9308"""
+    out = []
+    f = DG / "고령운전자_자진반납_15065567.csv"
+    if f.exists():
+        t = Table(9305, "운전면허 자진반납 (시도·고령)", "police", "운전면허", ["시도", "반납자"],
+                  ["출처: 경찰청 「시도 경찰청별 고령운전자 자진반납 현황」(공공데이터포털 15065567, 2025-12-31 기준) — 2015~2025",
+                   "시도 = 시도경찰청 기준(경기 = 경기남부 + 경기북부, 경기북부·세종은 개청 전 0). 전국 = 시도 합",
+                   "고령 = 65세 이상. 2019년 급증은 지자체 반납 지원금(교통카드 등) 확대 시기와 겹침 — 정책 연표 elderly_licence 참고",
+                   "고령 운전면허 소지자(9303 '65세 이상(합)')로 나누면 반납률"], DG_URL.format(15065567))
+        for r in rows_csv(f):
+            s = sido(r["지방청"])
+            if not s:
+                continue
+            for k, v in r.items():
+                m = re.match(r"^(\d{4}) (65세 이상|전체)$", k or "")
+                if m:
+                    t.put([s, "65세 이상" if m.group(2) != "전체" else "전체"], "반납자[명]", int(m.group(1)), num(v), add=True)
+        add_national(t)
+        for k, d in list(t.cells.items()):
+            if k[1] == "전체":
+                o = t.cells.get((k[0], "65세 이상", k[2]), {})
+                for y, v in d.items():
+                    if v and o.get(y) is not None:
+                        t.put([k[0], "65세 이상"], "고령 비중[%]", y, round(o[y] / v * 100, 2))
+        out.append(t.rec(lambda k: (SIDO_ORDER.index(k[0]) if k[0] in SIDO_ORDER else 99, k[1] != "전체", k[2])))
+    f = DG / "무인교통단속카메라_설치연도별_15028200.csv"
+    if f.exists():
+        R = rows_csv(f)
+        t = Table(9306, "무인교통단속카메라 설치 대수 (시도·연도)", "police", "교통안전 인프라", ["시도", "카메라 구분"],
+                  ["출처: 공공데이터포털 「전국무인교통단속카메라표준데이터」(15028200, 경찰청·지자체, 데이터기준일자 2026-10-20) — 고정식 44,650대를 설치연도로 집계",
+                   "'지금 남아 있는' 카메라를 설치연도로 센 값: 철거·교체된 카메라는 빠지므로 과거 누적 대수는 실제보다 작을 수 있음. 설치연도 미상 4,644대는 연도별 값에서 제외",
+                   "카메라 구분: 전체 / 어린이보호구역(보호구역구분 코드 2 — 제한속도 30km/h 가 대부분이라 어린이보호구역으로 추정, 표준 정의서 미확인) / 단속구분 코드 1·2·4(뜻 미확인: 1 은 구간단속 길이가 있는 경우가 많아 과속 계열로 보임)",
+                   "수치: 신규 설치[대] = 그 해 설치, 누적[대] = 그 해까지 설치(현존 기준). 2026년(일부)은 제외"], "https://www.data.go.kr/data/15028200/standard.do")
+        new = collections.defaultdict(float)
+        for r in R:
+            s = sido(r["시도명"]); y = r["설치연도"]
+            if not s or not y.isdigit() or not (Y0 - 30 <= int(y) <= Y1):
+                continue
+            y = int(y); n = float(r["대수"])
+            keys = ["전체"]
+            if r["보호구역구분코드"] == "2":
+                keys.append("어린이보호구역(추정)")
+            if r["단속구분코드"] in ("1", "2", "4"):
+                keys.append(f"단속구분 코드 {r['단속구분코드']}")
+            for g in (s, "전국"):
+                for k in keys:
+                    new[(g, k, y)] += n
+        groups = {(g, k) for g, k, _ in new}
+        for g, k in groups:
+            cum = sum(v for (gg, kk, y), v in new.items() if gg == g and kk == k and y < Y0)
+            for y in range(Y0, Y1 + 1):
+                v = new.get((g, k, y), 0.0); cum += v
+                t.put([g, k], "신규 설치[대]", y, v)
+                t.put([g, k], "누적[대]", y, cum)
+        order = ["전체", "어린이보호구역(추정)", "단속구분 코드 1", "단속구분 코드 2", "단속구분 코드 4"]
+        out.append(t.rec(lambda k: (SIDO_ORDER.index(k[0]) if k[0] in SIDO_ORDER else 99, order.index(k[1]) if k[1] in order else 9, k[2])))
+    f = DG / "음주운전_재범횟수별_단속_15043113.csv"
+    if f.exists():
+        t = Table(9307, "음주운전 단속 (재범 횟수별)", "police", "단속", ["위반 횟수"],
+                  ["출처: 경찰청 「연도별 음주운전 재범자 단속 실적 현황」(공공데이터포털 15043113, 2025-12-31 기준) — 2010~2025 전국",
+                   "계 = 1회~7회 이상 합 = 그 해 음주운전 단속 건수. 1회 = 처음 적발, 2회 이상 = 재범",
+                   "제2 윤창호법(2019-06, 단속기준 0.03%) 이후에도 단속 건수가 줄어든 점 주의 — 단속 건수는 단속 활동량(코로나19 시기 일제검문 축소 등)에 좌우됨"], DG_URL.format(15043113))
+        for r in rows_csv(f):
+            y = int(r["년도"]); tot = 0; re_ = 0
+            for k, v in r.items():
+                if k == "년도":
+                    continue
+                v = num(v); t.put([k], "단속[건]", y, v); tot += v or 0
+                if k != "1회":
+                    re_ += v or 0
+            t.put(["계"], "단속[건]", y, tot); t.put(["재범(2회 이상)"], "단속[건]", y, re_)
+            t.put(["재범(2회 이상)"], "재범 비중[%]", y, round(re_ / tot * 100, 2) if tot else None)
+        order = ["계", "1회", "재범(2회 이상)", "2회", "3회", "4회", "5회", "6회", "7회이상"]
+        out.append(t.rec(lambda k: (order.index(k[0]) if k[0] in order else 99, k[1])))
+    f = DG / "교통단속_위반유형별_3051800.csv"
+    if f.exists():
+        t = Table(9308, "교통법규 위반 단속 (위반 유형별)", "police", "단속", ["위반 유형"],
+                  ["출처: 경찰청 「교통 단속 현황」(공공데이터포털 3051800, 2018-12-31 기준) — 2014~2018 전국 (이후 연도는 공개 파일 없음)",
+                   "과속 단속에는 무인 단속카메라 적발이 포함됨 — 9306(카메라 설치)과 함께 보기"], DG_URL.format(3051800))
+        for r in rows_csv(f):
+            y = int(r["구분"]); tot = 0
+            for k, v in r.items():
+                if k == "구분":
+                    continue
+                v = num(v); t.put([k], "단속[건]", y, v); tot += v or 0
+            t.put(["계"], "단속[건]", y, tot)
+        out.append(t.rec(lambda k: (k[0] != "계", k[0])))
     return out
 
 
