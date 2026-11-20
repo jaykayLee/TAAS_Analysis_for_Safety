@@ -43,7 +43,10 @@ def write_online_packs(lib, target=1_200_000):
     out = lib / "online"
     if out.exists():
         for f in list(out.glob("pack_*.json.gz")) + list(out.glob("pack_*.txt")):
-            f.unlink()
+            try:
+                f.unlink()
+            except PermissionError:  # 삭제가 막힌 폴더(Claude 연결 폴더): 비워 두고 아래에서 덮어씀 — packs.json 에 없는 묶음은 쓰이지 않음
+                f.write_bytes(b"")
     out.mkdir(exist_ok=True)
     files = [f for _, f in sorted(panel_files(lib).items())]
     where, cur, size, n = {}, {}, 0, 0
