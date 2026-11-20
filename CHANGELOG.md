@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 2026-11-20 — 작업 인계 갱신
+
+- `ops/HANDOFF.md`: PC v1.6 반영 완료, 다음 단계 계획(업데이트·연동 분석·최종 산출물) 링크와 사용자 결정 대기 항목
+
 ## 2026-11-18 — v1.6 경찰청 공공데이터 · 분석 묶음
 
 - 경찰청 자료(공공데이터포털, KOSIS 밖)를 PC 브라우저로 받아 police 라이브러리에 추가 — `data/source/ext/police/datagokr`, 수집기 `collector/browser/datagokr_collect.js`
