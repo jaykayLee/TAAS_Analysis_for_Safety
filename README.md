@@ -76,7 +76,7 @@ python build.py
    python -m taas_collector export ..\data\raw\taas\taas_raw_full_2026.json.gz --from 2026 --to 2026
    ```
 2. `python build.py` → 새 원본이 자동 포함됩니다. 같은 장표·구간이 겹치면 **더 늦게 수집한 값**이 쓰입니다(2025년 확정치 재수집 등).
-3. 검증(아래) 후 `data/raw/taas/` 의 새 파일과 `CHANGELOG.md` 를 커밋합니다.
+3. 검증(아래) 후 `data/raw/taas/` 의 새 파일과 `_source/strategy/CHANGELOG.md` 를 커밋합니다.
 
 ## 폴더 구성
 

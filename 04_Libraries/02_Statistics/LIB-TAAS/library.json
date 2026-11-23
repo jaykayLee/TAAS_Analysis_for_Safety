@@ -1,0 +1,16 @@
+{
+ "schema": "library/1.0",
+ "id": "LIB-TAAS",
+ "name": "TAAS 교통사고 상세통계",
+ "version": "2025",
+ "pids": "1~7345 (338개 장표)",
+ "source": "03_References/02_Statistics/files/taas",
+ "raw": "03_References/02_Statistics/files/taas/taas_raw_full_*.json.gz",
+ "output": "04_Libraries/02_Statistics/LIB-TAAS/build",
+ "build": "python _source/build.py",
+ "verify": "python _source/ops/verify.py",
+ "note": "수집 원문(json.gz)이 곧 원천 — 같은 key 는 ts 가 늦은 것이 이김",
+ "category": "02_Statistics",
+ "generated_output_in_git": false,
+ "updated": "2026-11-23"
+}

@@ -1,0 +1,16 @@
+{
+ "schema": "library/1.0",
+ "id": "LIB-KOSTAT",
+ "name": "통계청 인구총조사 연령별 인구",
+ "version": "2025",
+ "pids": "9001·9002",
+ "source": "03_References/02_Statistics/files/kostat",
+ "raw": "04_Libraries/02_Statistics/LIB-KOSTAT/kostat.json.gz",
+ "output": "04_Libraries/02_Statistics/LIB-TAAS/build/ext/kostat",
+ "build": "python _source/build.py --ext kostat",
+ "verify": "python _source/ops/verify_ext.py kostat",
+ "note": "어린이 0~12세는 5세 단위로 추정",
+ "category": "02_Statistics",
+ "generated_output_in_git": false,
+ "updated": "2026-11-23"
+}

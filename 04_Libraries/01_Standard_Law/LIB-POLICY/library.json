@@ -1,0 +1,16 @@
+{
+ "schema": "library/1.0",
+ "id": "LIB-POLICY",
+ "name": "교통안전 제도 시행 연표",
+ "version": "25건",
+ "pids": "9901",
+ "source": "04_Libraries/01_Standard_Law/LIB-POLICY/정책_연표.csv",
+ "raw": "04_Libraries/01_Standard_Law/LIB-POLICY/policy.json.gz",
+ "output": "04_Libraries/02_Statistics/LIB-TAAS/build/ext/policy",
+ "build": "python _source/build.py --ext policy",
+ "verify": "python _source/ops/verify_ext.py policy",
+ "note": "근거 SOURCES.md(확인 13·부분확인 6·미확인 6), 법령 링크는 03_References/01_Standard_Law 색인",
+ "category": "01_Standard_Law",
+ "generated_output_in_git": false,
+ "updated": "2026-11-23"
+}

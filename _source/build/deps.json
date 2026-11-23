@@ -1,0 +1,179 @@
+{
+ "schema": "deps/1.0",
+ "note": "TAAS 의존성 — 보기는 브라우저·Office, 라이브러리 조립·문서 생성은 아래 도구·패키지",
+ "tested_on": "",
+ "tiers": [
+  {
+   "id": "view",
+   "name": "보기",
+   "who": "패널·문서를 읽는 사람",
+   "needs": "웹 브라우저·Office",
+   "how": "Main_<ID>.bat"
+  },
+  {
+   "id": "build",
+   "name": "빌드",
+   "who": "문서를 다시 만드는 사람",
+   "needs": "필수 도구 + 패키지",
+   "how": "install.bat → docset.py"
+  }
+ ],
+ "tools": [
+  {
+   "id": "python",
+   "name": "Python",
+   "need": "필수",
+   "min": "3.10",
+   "tested": "",
+   "purpose": "라이브러리 조립(build.py)·통계 검증·문서 세트 생성기",
+   "check": "python --version",
+   "winget": "Python.Python.3.12",
+   "url": "https://www.python.org/downloads/"
+  },
+  {
+   "id": "node",
+   "name": "Node.js",
+   "need": "필수",
+   "min": "18",
+   "tested": "",
+   "purpose": "PPT 생성",
+   "check": "node --version",
+   "winget": "OpenJS.NodeJS.LTS",
+   "url": "https://nodejs.org/"
+  },
+  {
+   "id": "git",
+   "name": "Git (Git Bash 포함)",
+   "need": "필수",
+   "min": "2.30",
+   "tested": "",
+   "purpose": "이력·업데이트 날짜",
+   "check": "git --version",
+   "winget": "Git.Git",
+   "url": "https://git-scm.com/"
+  },
+  {
+   "id": "pandoc",
+   "name": "pandoc",
+   "need": "필수",
+   "min": "2.19",
+   "tested": "",
+   "purpose": "md → Word",
+   "check": "pandoc --version",
+   "winget": "JohnMacFarlane.Pandoc",
+   "url": "https://pandoc.org/installing.html"
+  }
+ ],
+ "python": [
+  {
+   "pkg": "pandas",
+   "min": "2.0",
+   "tested": "",
+   "purpose": "라이브러리 조립"
+  },
+  {
+   "pkg": "pyarrow",
+   "min": "14",
+   "tested": "",
+   "purpose": "Parquet 저장"
+  },
+  {
+   "pkg": "duckdb",
+   "min": "1.0",
+   "tested": "",
+   "purpose": "라이브러리 검증(verify.py)"
+  },
+  {
+   "pkg": "openpyxl",
+   "min": "3.1",
+   "tested": "",
+   "purpose": "Excel"
+  },
+  {
+   "pkg": "python-docx",
+   "min": "1.1",
+   "tested": "",
+   "purpose": "Word"
+  },
+  {
+   "pkg": "playwright",
+   "min": "1.40",
+   "tested": "",
+   "purpose": "수집기·패널 시험(선택)"
+  },
+  {
+   "pkg": "statsmodels",
+   "min": "0.14",
+   "tested": "",
+   "purpose": "통계 기법 검증(선택)"
+  },
+  {
+   "pkg": "pymannkendall",
+   "min": "1.4",
+   "tested": "",
+   "purpose": "추세 검정 검증(선택)"
+  }
+ ],
+ "node": [
+  {
+   "pkg": "pptxgenjs",
+   "min": "3.12",
+   "tested": "",
+   "purpose": "PowerPoint"
+  }
+ ],
+ "post": [],
+ "data": [],
+ "services": [
+  {
+   "name": "TAAS 교통사고분석시스템",
+   "where": "https://taas.koroad.or.kr",
+   "purpose": "사고 통계 수집(PC 브라우저 필요)"
+  },
+  {
+   "name": "KOSIS 국가통계포털",
+   "where": "https://kosis.kr",
+   "purpose": "인구·차량·면허 통계(OpenAPI 키 권장)"
+  },
+  {
+   "name": "공공데이터포털",
+   "where": "https://www.data.go.kr",
+   "purpose": "경찰청 단속·면허 자료"
+  },
+  {
+   "name": "GitHub",
+   "where": "https://github.com/jaykayLee/TAAS_Analysis_for_Safety",
+   "purpose": "저장소·업데이트"
+  }
+ ],
+ "caveats": [
+  "라이브러리 전체 조립은 메모리 4GB 이상 권장(약 5분)",
+  "Claude PC 연결 셸은 메모리 3GB·호출당 45초라 전체 조립 불가 — 클라우드에서 조립 후 바뀐 파일만 전송"
+ ],
+ "office": {
+  "name": "Microsoft Office(PowerPoint·Word·Excel)",
+  "min": "2016",
+  "note": "Microsoft 365 권장"
+ },
+ "fonts": [
+  {
+   "name": "Malgun Gothic(맑은 고딕)",
+   "files": [
+    "malgun.ttf"
+   ],
+   "need": "필수",
+   "used": "문서 본문·제목",
+   "source": "Windows 기본 포함"
+  },
+  {
+   "name": "Calibri · Cambria",
+   "files": [
+    "calibri.ttf",
+    "cambria.ttc"
+   ],
+   "need": "필수",
+   "used": "Office 테마 기본",
+   "source": "Office 기본 포함"
+  }
+ ]
+}

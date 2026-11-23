@@ -1,0 +1,16 @@
+{
+ "schema": "library/1.0",
+ "id": "LIB-MOIS",
+ "name": "행정안전부 주민등록인구",
+ "version": "-",
+ "pids": "9101·9102",
+ "source": "03_References/02_Statistics/files/mois",
+ "raw": "04_Libraries/02_Statistics/LIB-MOIS/mois.json.gz",
+ "output": "04_Libraries/02_Statistics/LIB-TAAS/build/ext/mois",
+ "build": "python _source/build.py --ext mois",
+ "verify": "python _source/ops/verify_ext.py mois",
+ "note": "수집 예정(KOSIS OpenAPI 키)",
+ "category": "02_Statistics",
+ "generated_output_in_git": false,
+ "updated": "2026-11-23"
+}
