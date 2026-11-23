@@ -25,3 +25,6 @@ _source/dist/
 # 이전 구조(전환 전) 경로 — PC 폴더에 남은 생성물
 library/
 library.building/
+
+# 메인 패널(빌드 생성물 — python _source/build.py 가 만듦)
+01_Panel/Main/*.html

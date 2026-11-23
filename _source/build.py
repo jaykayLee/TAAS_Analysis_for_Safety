@@ -101,6 +101,20 @@ def build_into(raws, dest, keep=()):
     return res
 
 
+PANEL_ONLINE = "TAAS_분석패널.html"            # 온라인 게시본(claude.ai 아티팩트에 올리는 페이지)
+PANEL_OFFLINE = "TAAS_분석패널_offline.html"  # PC 에서 여는 판 — <base> 로 라이브러리 생성물을 읽음
+
+
+def write_offline_panel(out):
+    """01_Panel/Main 의 오프라인 메인 패널 = 라이브러리의 panel.html + <base href=라이브러리> (데이터는 복사하지 않음)"""
+    import os
+    rel = os.path.relpath(out, TP.PANEL_MAIN).replace(os.sep, "/") + "/"
+    html = (out / "panel.html").read_text(encoding="utf-8")
+    tag = f'<base href="{rel}">'
+    html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8">' + tag, 1) if '<meta charset="utf-8">' in html else tag + html
+    (TP.PANEL_MAIN / PANEL_OFFLINE).write_text(html, encoding="utf-8")
+
+
 def write_ext_index(out, libs):
     """부처 라이브러리 목록을 하나로 — 패널이 TAAS 목록에 붙여 보여 줌"""
     cat = json.loads(TP.EXT_SOURCES.read_text(encoding="utf-8"))["libs"]
@@ -187,7 +201,12 @@ def main():
     for s, name in COPY_TO_LIB.items():
         if s.exists():
             shutil.copy2(s, out / name)
-    info = build_panel(out, TEMPLATE, str(out / "panel_sample.html") if a.sample else None, str(out / "panel_online.html"))
+    std = out.resolve() == TP.LIB_OUT.resolve()   # 표준 위치면 메인 패널을 01_Panel/Main 에도 둠
+    online_out = TP.PANEL_MAIN / PANEL_ONLINE if std else out / "panel_online.html"
+    online_out.parent.mkdir(parents=True, exist_ok=True)
+    info = build_panel(out, TEMPLATE, str(out / "panel_sample.html") if a.sample else None, str(online_out))
+    if std:
+        write_offline_panel(out)
     print("      ", info)
 
     if a.excel:
@@ -203,7 +222,8 @@ def main():
     info = {"repo": REPO, "branch": BRANCH, **c, "built_at": built, "data_built_at": data_built, "data_rebuilt": need_data, "ext_built_at": ext_built}
     (out / "build_info.json").write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "build_info.js").write_text("window.TAAS_BUILD=" + json.dumps(info, ensure_ascii=False) + ";", encoding="utf-8")
-    print(f"[3/3] 완료 ({time.time() - t0:.0f}초) → {out / 'panel.html'} 를 더블클릭해서 여세요.")
+    opened = TP.PANEL_MAIN / PANEL_OFFLINE if out.resolve() == TP.LIB_OUT.resolve() else out / "panel.html"
+    print(f"[3/3] 완료 ({time.time() - t0:.0f}초) → {TP.rel(opened)} 를 더블클릭해서 여세요 (또는 Main_TAAS.bat).")
 
 
 if __name__ == "__main__":

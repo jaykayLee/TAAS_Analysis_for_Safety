@@ -1,7 +1,7 @@
 import asyncio, json
 from playwright.async_api import async_playwright
 SP = __import__('os').environ.get('CHARTJS_DIR', str(__import__('pathlib').Path(__file__).resolve().parents[3]))
-PANEL=(__import__('pathlib').Path(__file__).resolve().parents[3]/'04_Libraries'/'02_Statistics'/'LIB-TAAS'/'build'/'panel.html').as_uri()
+PANEL=(__import__('pathlib').Path(__file__).resolve().parents[3]/'01_Panel'/'Main'/'TAAS_분석패널_offline.html').as_uri()
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])

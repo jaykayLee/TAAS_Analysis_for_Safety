@@ -73,7 +73,7 @@ def readme_txt(V):
     L = [f"{NAME} ({PID}) — {V}", "=" * 48, f"시작: Main_{PID}.bat (프로젝트 홈 → 메인 패널) · 프로젝트 정보: PROJECT.json · 지금 상태: 05_UserComments/STATUS.md",
          f"온라인 패널: {PANEL_URL}", f"저장소: https://github.com/{REPO} (브랜치 {BRANCH})", "", f"구조(project-structure/{K.STRUCT_VER}):",
          *[f"   {t['path']:18} {t['role']}" for t in K.top(PID)], "", f"이번 버전: {head}", body, "",
-         "라이브러리 다시 만들기: python _source/build.py   · 바뀐 파일만 받기: python _source/ops/pc_sync.py", "생성물 — _source/build/project_meta.py", ""]
+         "Main_TAAS.bat 인자: (없음)=홈 · main · serve(업데이트 버튼) · update · sync(바뀐 파일만) · build · online", "생성물 — _source/build/project_meta.py", ""]
     open(rp("README.txt"), "w", encoding="utf-8").write("\n".join(L))
 
 
@@ -104,9 +104,28 @@ def ref_indexes(V):
     return [rp("03_References", c, f"참고문헌_색인_{c}_{V}.xlsx") for c, _, _ in K.CATS if c != "06_Methods"]
 
 
+def main_bat():
+    L = ["@echo off", "chcp 65001 >nul", 'cd /d "%~dp0"', f"rem {NAME} — 시작 파일(생성물: _source/build/project_meta.py). 인자 없이 실행하면 프로젝트 홈을 엽니다.",
+         f'if /i "%~1"=="online" (start "" "{PANEL_URL}" & goto :eof)',
+         *[f'if /i "%~1"=="{k}" goto {k}' for k in ("home", "main", "serve", "update", "sync", "build")],
+         'if not "%~1"=="" goto help',
+         ":home", 'for %%f in ("%~dp001_Panel\\Home\\*.html") do (start "" "%%~ff" & goto :eof)',
+         ":main", 'for %%f in ("%~dp001_Panel\\Main\\*_offline.html") do (start "" "%%~ff" & goto :eof)',
+         "echo 메인 패널이 아직 없습니다 - 먼저 Main_TAAS.bat build 를 실행하세요.", "pause", "goto :eof",
+         ":serve", "echo 로컬 서버로 메인 패널을 엽니다. 패널의 [업데이트] 버튼이 동작하며, 이 창을 닫으면 멈춥니다.", "python _source\\serve.py %2 %3", "pause", "goto :eof",
+         ":update", "python _source\\serve.py --update", "pause", "goto :eof",
+         ":sync", "python _source\\ops\\pc_sync.py %2", "pause", "goto :eof",
+         ":build", "python _source\\build.py %2 %3 %4", "if errorlevel 1 (echo. & echo 빌드 실패: install.bat 으로 의존성을 먼저 설치했는지 확인하세요.)", "pause", "goto :eof",
+         ":help", f"echo {NAME} 시작 파일", "echo   Main_TAAS.bat          프로젝트 홈(폴더 지도) - 여기서 메인 패널로",
+         "echo   Main_TAAS.bat main     메인 패널(오프라인판) 바로 열기", "echo   Main_TAAS.bat serve    로컬 서버로 메인 패널 열기 - [업데이트] 버튼 동작",
+         "echo   Main_TAAS.bat update   최신 버전 받기 + 다시 만들기", "echo   Main_TAAS.bat sync     바뀐 파일만 받기(pc_sync)",
+         "echo   Main_TAAS.bat build    라이브러리·패널 만들기(--full, --sample, --ext 부처)", "echo   Main_TAAS.bat online   게시 패널(claude.ai) 열기", "pause", ""]
+    open(rp(f"Main_{PID}.bat"), "w", encoding="utf-8", newline="").write("\r\n".join(L))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--version", required=True); a = ap.parse_args()
-    project_json(a.version); readme_txt(a.version); library_jsons(); made = ref_indexes(a.version)
+    project_json(a.version); readme_txt(a.version); main_bat(); library_jsons(); made = ref_indexes(a.version)
     import subprocess
     subprocess.run([sys.executable, os.path.join(BUILD, "template", "office_check.py"), "-q", *made], check=True)
-    print("saved PROJECT.json · README.txt · library.json", len(LIBS), "· 03 색인", len(made))
+    print("saved PROJECT.json · README.txt · Main_TAAS.bat · library.json", len(LIBS), "· 03 색인", len(made))

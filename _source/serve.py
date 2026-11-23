@@ -1,7 +1,7 @@
 """
 TAAS 패널 로컬 서버 — 패널의 [업데이트] 버튼이 이 서버를 통해 최신 버전을 받고 다시 빌드합니다.
 
-    python _source/serve.py              라이브러리의 panel.html 을 http://127.0.0.1:8765 로 열기 (브라우저 자동 실행)
+    python _source/serve.py              메인 패널(01_Panel/Main)을 http://127.0.0.1:8765 로 열기 (브라우저 자동 실행)
     python _source/serve.py --update     서버 없이 업데이트만 실행 (git pull 또는 zip 내려받기 → build.py)
     python _source/serve.py --port 9000 --no-browser
 
@@ -12,7 +12,7 @@ TAAS 패널 로컬 서버 — 패널의 [업데이트] 버튼이 이 서버를 �
 
 보안: 127.0.0.1 에서만 열리고, 업데이트 요청은 같은 주소의 패널에서 보낸 것만 받습니다. 표준 라이브러리만 사용합니다.
 """
-import argparse, http.server, io, json, os, shutil, subprocess, sys, threading, time, urllib.request, webbrowser, zipfile
+import argparse, http.server, io, json, os, shutil, subprocess, sys, threading, time, urllib.parse, urllib.request, webbrowser, zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -20,6 +20,8 @@ import taas_paths as TP  # noqa: E402
 ROOT = TP.ROOT
 LIB = TP.LIB_OUT
 BUILD = str(TP.SRC / "build.py")
+PANEL = TP.PANEL_MAIN / "TAAS_분석패널_offline.html"
+PANEL_URL = "/" + urllib.parse.quote(TP.rel(PANEL))
 REPO = "jaykayLee/TAAS_Analysis_for_Safety"
 BRANCH = "main"
 JOB = {"state": "idle"}
@@ -140,7 +142,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                       ".json": "application/json; charset=utf-8", ".md": "text/markdown; charset=utf-8", ".gz": "application/gzip"}
 
     def __init__(self, *a, **k):
-        super().__init__(*a, directory=str(LIB), **k)
+        super().__init__(*a, directory=str(ROOT), **k)  # 프로젝트 루트 — 01_Panel/Main 패널이 <base> 로 라이브러리를 읽음
 
     def log_message(self, fmt, *args):
         if "/api/" in (args[0] if args else ""):
@@ -162,13 +164,13 @@ class H(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
         if path == "/":
-            self.send_response(302); self.send_header("Location", "/panel.html"); self.end_headers(); return
-        if path == "/api/status":
+            self.send_response(302); self.send_header("Location", PANEL_URL); self.end_headers(); return
+        if path.endswith("/api/status"):
             return self._json(200, status())
         return super().do_GET()
 
     def do_POST(self):
-        if self.path.split("?")[0] != "/api/update":
+        if not self.path.split("?")[0].endswith("/api/update"):
             return self._json(404, {"error": "not found"})
         host = self.headers.get("Host", "")
         origin = self.headers.get("Origin")
@@ -191,7 +193,7 @@ def main():
         update_job()
         print("결과:", JOB.get("state"), JOB.get("error", ""))
         sys.exit(0 if JOB.get("state") == "done" else 1)
-    if not (LIB / "panel.html").exists():
+    if not PANEL.exists():
         print("라이브러리가 없어 먼저 빌드합니다…")
         subprocess.run([sys.executable, BUILD], cwd=ROOT, env=ENV)
     srv = None
@@ -203,7 +205,7 @@ def main():
             continue
     if not srv:
         sys.exit("빈 포트를 찾지 못했습니다.")
-    url = f"http://127.0.0.1:{srv.server_address[1]}/panel.html"
+    url = f"http://127.0.0.1:{srv.server_address[1]}{PANEL_URL}"
     print(f"TAAS 패널: {url}  (끄려면 이 창을 닫거나 Ctrl+C)")
     if not a.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()

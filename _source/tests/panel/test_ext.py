@@ -83,6 +83,11 @@ async def check(pg, label, errs, online=False):
 
 
 async def main():
+    # 온라인 게시본은 01_Panel/Main 에 있음 — 게시와 같게 라이브러리 폴더 옆에 두고 http 로 엶
+    import shutil
+    main = Path(__file__).resolve().parents[3] / "01_Panel" / "Main" / "TAAS_분석패널.html"
+    if main.exists():
+        shutil.copyfile(main, LIB / "panel_online.html")
     srv = serve(); port = srv.server_address[1]
     async with async_playwright() as p:
         b = await p.chromium.launch()
