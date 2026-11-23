@@ -1,0 +1,76 @@
+{
+ "schema": "project/1.0",
+ "id": "TAAS",
+ "name": "TAAS 교통사고 분석",
+ "version": "v1.7",
+ "structure": {
+  "contract": "project-structure/1.0",
+  "doc": "02_Strategy/03_User/프로젝트구조_규약_v1.0.docx"
+ },
+ "owner": "J.K. Lee",
+ "repo": "jaykayLee/TAAS_Analysis_for_Safety",
+ "branch": "main",
+ "panel_url": "https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune",
+ "entry": "Main_TAAS.bat",
+ "folders": {
+  "_source": "코드 — 라이브러리 조립(build.py)·패널 원천·수집기·자동 갱신·시험·문서 원천",
+  "01_Panel": "Home(프로젝트 홈) · Main(TAAS 분석 패널, 온라인 게시본은 panel_url)",
+  "02_Strategy": "변경 이력·갱신 절차·분석 보고서·사용 매뉴얼·LLM 절차·의존성",
+  "03_References": "TAAS·KOSIS·공공데이터 원문(수집본)과 법령 링크 색인",
+  "04_Libraries": "LIB-TAAS·부처 라이브러리(KOSTAT·MOIS·MOLIT·POLICE)·제도 연표·참고문헌 목록 — 빌드 결과는 LIB-TAAS/build(git 제외)",
+  "05_UserComments": "STATUS.md(지금 상태·다음 할 일) · 요청 · 예약 작업 프롬프트"
+ },
+ "libraries": [
+  {
+   "id": "LIB-TAAS",
+   "version": "2025",
+   "category": "02_Statistics",
+   "path": "04_Libraries/02_Statistics/LIB-TAAS"
+  },
+  {
+   "id": "LIB-KOSTAT",
+   "version": "2025",
+   "category": "02_Statistics",
+   "path": "04_Libraries/02_Statistics/LIB-KOSTAT"
+  },
+  {
+   "id": "LIB-MOIS",
+   "version": "-",
+   "category": "02_Statistics",
+   "path": "04_Libraries/02_Statistics/LIB-MOIS"
+  },
+  {
+   "id": "LIB-MOLIT",
+   "version": "-",
+   "category": "02_Statistics",
+   "path": "04_Libraries/02_Statistics/LIB-MOLIT"
+  },
+  {
+   "id": "LIB-POLICE",
+   "version": "2025",
+   "category": "02_Statistics",
+   "path": "04_Libraries/02_Statistics/LIB-POLICE"
+  },
+  {
+   "id": "LIB-POLICY",
+   "version": "25건",
+   "category": "01_Standard_Law",
+   "path": "04_Libraries/01_Standard_Law/LIB-POLICY"
+  },
+  {
+   "id": "LIB-REFS",
+   "version": "1.0",
+   "category": "00_Core",
+   "path": "04_Libraries/00_Core/LIB-REFS"
+  }
+ ],
+ "library_output": "04_Libraries/02_Statistics/LIB-TAAS/build",
+ "status": "05_UserComments/STATUS.md",
+ "history": "02_Strategy/00_History/",
+ "exceptions": [
+  "최상위 CLAUDE.md(Claude 작업 규칙 — 저장소 루트에 있어야 읽힘)·README.md(GitHub 첫 화면)·.gitignore 는 표준 목록 밖이지만 유지",
+  "기본 브랜치는 main(PC 업데이트·패널 [업데이트] 버튼이 main 을 받음)"
+ ],
+ "updated": "2026-11-23",
+ "note": "생성물 — _source/build/project_meta.py"
+}

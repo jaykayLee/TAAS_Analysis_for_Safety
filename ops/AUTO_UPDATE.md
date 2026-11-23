@@ -63,7 +63,7 @@ TAAS·KOSIS 사이트는 클라우드에서 접속되지 않습니다. **사용�
 1. 상태 기록: `status=build, step=4, message="라이브러리 조립 중"`.
 2. `python build.py --sample` (원본이 바뀌면 약 5분).
 3. `python ops/verify.py --expect-year <latest>` → `ok: false` 면 상태 `error`(message 에 fail 내용) 로 멈춥니다(커밋하지 않음).
-4. `CHANGELOG.md` 맨 위에 한 줄: `## <날짜> — <연도>년 TAAS 반영 (자동 갱신)` 과 장표 수·셀 수·전국 사고건수.
+4. `_source/strategy/CHANGELOG.md` 맨 위에 한 줄: `## <날짜> — <연도>년 TAAS 반영 (자동 갱신)` 과 장표 수·셀 수·전국 사고건수.
 5. 저장소 반영: 브랜치 `claude/auto-<YYYYMMDD-HHMM>` 커밋 → `git -c push.negotiate=true push -u origin <브랜치>` → REST 로 PR 생성(`gh api repos/jaykayLee/TAAS_Analysis_for_Safety/pulls -f head=… -f base=main …`) → 병합(`gh api -X PUT …/pulls/<번호>/merge -f merge_method=merge`). 병합이 막히면 PR 을 열어 둔 채 message 에 PR 주소를 남깁니다.
 6. 패널 재게시: 상태 `status=publish`. `python build.py` 를 한 번 더 실행해 `library/build_info.*` 에 병합 커밋을 넣은 뒤 `python ops/publish_plan.py`.
    - `Artifact` 도구로 `artifact_url` 을 먼저 `read` 합니다.

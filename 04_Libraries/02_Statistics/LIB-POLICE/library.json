@@ -1,0 +1,16 @@
+{
+ "schema": "library/1.0",
+ "id": "LIB-POLICE",
+ "name": "경찰청 보호구역·면허·단속",
+ "version": "2025",
+ "pids": "9003, 9301~9308",
+ "source": "03_References/02_Statistics/files/police",
+ "raw": "04_Libraries/02_Statistics/LIB-POLICE/police.json.gz",
+ "output": "04_Libraries/02_Statistics/LIB-TAAS/build/ext/police",
+ "build": "python _source/build.py --ext police",
+ "verify": "python _source/ops/verify_ext.py police",
+ "note": "KOSIS 면허 9301·9303·9304 는 수집 예정",
+ "category": "02_Statistics",
+ "generated_output_in_git": false,
+ "updated": "2026-11-23"
+}

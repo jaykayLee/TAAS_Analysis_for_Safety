@@ -17,3 +17,7 @@ Thumbs.db
 .zip_commit.json
 ops/_publish_*.json
 _to_delete/
+# 표준 구조(project-structure/1.0) 생성 중간물
+_source/build/_work/
+_source/dist/
+node_modules/

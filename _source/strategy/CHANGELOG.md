@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 2026-11-23 — v1.7 표준 구조 전환 1단계(문서·상태 층)
+
+- 공통 표준 구조(project-structure/1.0, 프로젝트 ID TAAS) 적용 시작 — 요청 `05_UserComments/01_Requests/REQ-20261123-01_표준구조_전환.md`
+- 이전 구조(v1.6) 보관: git 브랜치 `archive/pre-standard-v1.6` (저장소 전체 압축본 `_archive/TAAS_이전구조_v1.6_ebe7e1d.zip`)
+- 추가: `PROJECT.json` · `README.txt` · `install.bat` · 폴더 01~05 골격과 README · `05_UserComments/STATUS.md`(이전 `ops/HANDOFF.md`) · 요청 기록
+- 문서: 프로젝트구조_규약·의존성_목록·프로젝트_변경이력(각 docx·xlsx·pptx), 03_References 분류별 참고문헌 색인(47건, 원천 `04_Libraries/00_Core/LIB-REFS/refs.json`), 라이브러리 7개 `library.json`
+- 원천: `_source/build`(표준 키트 — 문서 세트·홈·의존성·Office 검사), `_source/build/project_meta.py`, `_source/strategy/content.py`, 변경 이력 원천을 `_source/strategy/CHANGELOG.md` 로 이동
+
 ## 2026-11-20 — 작업 인계 갱신
 
 - `src/build_panel.py`: 삭제가 막힌 PC 연결 폴더에서도 패널 재생성이 되도록 이전 게시 묶음을 지우는 대신 비워서 덮어씀 (`pc_sync` 패널 생성 실패 수정)

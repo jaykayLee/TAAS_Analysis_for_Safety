@@ -47,7 +47,7 @@ TAAS 와 같습니다(`ops/AUTO_UPDATE.md` 1단계). PC 연결·브라우저가 
 2. `python build.py --ext <lib>` (그 부처 원본만 다시 만들고 그 부처 라이브러리만 조립).
 3. `python ops/verify_ext.py <lib>` → `ok:false` 면 상태 `error` 로 멈춤(커밋하지 않음).
 4. 바뀐 것이 없으면(`git status` 에 `data/` 변화 없음) 상태 `no_new_data` 로 끝.
-5. `CHANGELOG.md` 맨 위에 `## <날짜> — <부처> 자료 갱신 (자동)` 과 장표·연도 범위 한 줄.
+5. `_source/strategy/CHANGELOG.md` 맨 위에 `## <날짜> — <부처> 자료 갱신 (자동)` 과 장표·연도 범위 한 줄.
 6. 브랜치 `claude/ext-<lib>-<YYYYMMDD-HHMM>` 커밋 → push → PR → 병합(`ops/AUTO_UPDATE.md` 4-5 와 같은 방법).
 7. 패널 재게시: 상태 `publish`. `python build.py` → `python ops/publish_plan.py` → `Artifact` read 후 publish(**`capabilities` 넘기지 않음**).
 8. 상태: `done, finished, version=<병합 커밋>, collected=[<key>…], panel_published=true, message="<부처> 갱신 — 장표 n개, ~<최신 연도>"`.

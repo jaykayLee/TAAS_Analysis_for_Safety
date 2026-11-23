@@ -1,0 +1,16 @@
+{
+ "schema": "library/1.0",
+ "id": "LIB-REFS",
+ "name": "참고문헌 목록(03 색인의 원천)",
+ "version": "1.0",
+ "pids": "-",
+ "source": "04_Libraries/00_Core/LIB-REFS/refs.json",
+ "raw": "04_Libraries/00_Core/LIB-REFS/refs.json",
+ "output": "03_References/<분류>/참고문헌_색인_<분류>_v*.xlsx",
+ "build": "python _source/build/project_meta.py --version <버전>",
+ "verify": "-",
+ "note": "새 문헌은 refs.json 에 추가",
+ "category": "00_Core",
+ "generated_output_in_git": true,
+ "updated": "2026-11-23"
+}
