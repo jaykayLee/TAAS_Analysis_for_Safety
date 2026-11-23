@@ -7,7 +7,7 @@
 
 ## 요청(01_Requests)
 
-- [완료] `REQ-20261123-01_표준구조_전환.md` — 공통 표준 구조 전환 1~3단계(v1.7·v1.8·v2.0), PC 폴더·온라인 패널(version 13)·예약 작업 프롬프트 반영 완료. 남은 확인: Windows 에서 `install.bat` → V(Office 열기 시험), PC 최상위의 이전 자료 3개(`TAAS Analysis_old/`·`TAAS_Analysis_for_Safety_전체_v1.2.zip`·`TAAS_library_v1.4_변경분.zip`) 정리 여부
+- [완료] `REQ-20261123-01_표준구조_전환.md` — 공통 표준 구조 전환 1~3단계(v1.7·v1.8·v2.0), PC 폴더·온라인 패널(version 13)·예약 작업 프롬프트 반영 완료. ✅ 2026-11-23 Windows `install.bat` → V 모두 정상(글꼴 2종 있음, Office 파일 21개 열림), PC 최상위 이전 자료 3개 삭제(사용자 선택)
 
 ## 결정 묶음(02_Decisions)
 

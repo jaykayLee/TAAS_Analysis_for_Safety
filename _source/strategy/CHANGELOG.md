@@ -7,6 +7,7 @@
 - `serve.py` 는 프로젝트 루트를 열고 메인 패널로 안내(패널의 [업데이트] 버튼 그대로 동작), 게시 계획은 `01_Panel/Main/TAAS_분석패널.html` 을 페이지로 씀
 - `README.md`·`CLAUDE.md`·자동 갱신 절차·예약 작업 프롬프트를 새 경로로 갱신
 - `pc_sync.py`: 받을 파일을 `git archive` 한 번으로 꺼내 덮어씀(파일마다 git 호출하던 것보다 수십 배 빠름), 비어 버린 예전 폴더는 `_to_delete/` 로, `--no-build`·`--no-fetch` 추가
+- Windows 확인(install.bat → V): 글꼴 모두 있음, PPT·Word·Excel 21개 모두 열림 — 11절 점검표 완료
 - 게시용 데이터 묶음(`online/pack_*.txt`)은 빌드 대신 `publish_plan.py` 가 게시 직전에 만듦 — PC 빌드가 수 초로 끝남
 
 ## 2026-11-23 — v1.8 표준 구조 전환 2단계(코드·데이터 이동)
