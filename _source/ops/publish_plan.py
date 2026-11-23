@@ -22,6 +22,14 @@ PER = 240
 
 
 def main():
+    sys_path = str(TP.SRC / "src")
+    if sys_path not in _sys.path:
+        _sys.path.insert(0, sys_path)
+    from build_panel import write_online_packs, panel_files
+    man = LIB / "online" / "packs.json"
+    newest = max(f.stat().st_mtime for f in panel_files(LIB).values())
+    if not man.exists() or man.stat().st_mtime < newest:
+        write_online_packs(LIB)   # 게시용 데이터 묶음(빌드 결과가 바뀌었을 때만)
     page = TP.PANEL_MAIN / "TAAS_분석패널.html"
     if not page.exists():
         raise SystemExit(f"{TP.rel(page)} 이 없습니다. python _source/build.py 를 먼저 실행하세요.")
