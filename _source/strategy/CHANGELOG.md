@@ -1,5 +1,14 @@
 # 변경 기록
 
+## 2026-11-23 — v1.8 표준 구조 전환 2단계(코드·데이터 이동)
+
+- 코드 → `_source/`(build.py·serve.py·src·collector·panel 원천·ops 스크립트·tests·매뉴얼 생성기·분석 스크립트), 경로는 `_source/taas_paths.py` 한 곳에서 정의
+- TAAS 수집 원문·부처 원자료 → `03_References/02_Statistics/files/`(taas·kostat·police), 부처 원천 → `04_Libraries/02_Statistics/LIB-KOSTAT·LIB-POLICE`, 제도 연표·근거 → `04_Libraries/01_Standard_Law/LIB-POLICY`
+- 라이브러리 생성물 → `04_Libraries/02_Statistics/LIB-TAAS/build/`(git 제외). 원본 서명은 파일 이름 기준이라 폴더를 옮겨도 다시 조립하지 않음
+- 문서 → 02_Strategy(자동 갱신·부처 갱신 절차 → 04_LLM, 사용 매뉴얼 → 03_User, 수집 현황 → 01_Update/Log, 분석 워크북 → 02_Analysis/Workbooks), Claude 앱 프롬프트 → `05_UserComments/03_Prompts/`
+- `pc_sync.py`: 이름·위치만 바뀐 파일은 다시 받지 않고 그 자리로 옮김, 예전 `library/` 를 새 위치로 옮김
+- 검증: 2025 전국 193,889건·부상 합 불일치 0, 부처 라이브러리 ok, 통계 기법 대조 MISMATCHES 0, 패널·부처 시험 통과
+
 ## 2026-11-23 — v1.7 표준 구조 전환 1단계(문서·상태 층)
 
 - 공통 표준 구조(project-structure/1.0, 프로젝트 ID TAAS) 적용 시작 — 요청 `05_UserComments/01_Requests/REQ-20261123-01_표준구조_전환.md`

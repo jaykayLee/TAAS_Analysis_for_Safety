@@ -1,6 +1,7 @@
-# 생성물
-library/
-library.building/
+# 생성물 — 라이브러리 빌드 결과(python _source/build.py)
+04_Libraries/02_Statistics/LIB-TAAS/build/
+04_Libraries/02_Statistics/LIB-TAAS/build.building/
+**/*.building/
 *.bak_*
 out/
 # 파이썬·노드
@@ -8,16 +9,19 @@ __pycache__/
 *.pyc
 node_modules/
 # 수집기 작업 파일
-collector/taas_collect.sqlite*
-collector/*.json.gz
+_source/collector/taas_collect.sqlite*
+_source/collector/*.json.gz
 # 기타
 .DS_Store
 Thumbs.db
 ~$*
 .zip_commit.json
-ops/_publish_*.json
+_source/ops/_publish_*.json
 _to_delete/
+_incoming/
 # 표준 구조(project-structure/1.0) 생성 중간물
 _source/build/_work/
 _source/dist/
-node_modules/
+# 이전 구조(전환 전) 경로 — PC 폴더에 남은 생성물
+library/
+library.building/
