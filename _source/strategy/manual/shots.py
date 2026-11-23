@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright
 import os, pathlib
 ROOT=pathlib.Path(__file__).resolve().parents[3]
 SP=os.environ.get('CHARTJS_DIR',str(ROOT))
-PANEL=(ROOT/'04_Libraries'/'02_Statistics'/'LIB-TAAS'/'build'/'panel.html').as_uri()
+PANEL=(ROOT/'01_Panel'/'Main'/'TAAS_분석패널_offline.html').as_uri()
 OUT=str(pathlib.Path(__file__).resolve().parent/'img')+'/'
 async def main():
     async with async_playwright() as p:

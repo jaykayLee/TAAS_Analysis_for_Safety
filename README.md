@@ -1,99 +1,44 @@
 # TAAS Analysis for Safety
 
-한국도로교통공단 **TAAS 교통사고 상세통계(338개 장표, 2005~2025)** 와 **통계청 연령별 인구**를 하나의 라이브러리로 모아,
+한국도로교통공단 **TAAS 교통사고 상세통계(338개 장표, 2005~2025)** 와 부처 통계(인구·차량·면허·단속)·제도 시행 연표를 하나의 라이브러리로 모아,
 브라우저 패널에서 탐색 · 상관관계 · 5가지 통계 기법으로 분석하고 차량 안전기술(ADAS 등)과 연결해 보는 프로젝트입니다.
 
-- 라이브러리: 장표 340개 · 셀 30,249,410개 · 2005~2025년 (TAAS 338 + 인구 2)
-- 패널: 탐색 / 상관관계 분석 / 통계 기법(추세·그레인저·다중회귀·주성분·중단 시계열) / 차량기술 매핑
-- 결과 내보내기: 통계 기법 결과를 같은 13열 형식(CSV/JSON)으로 모아 기법별로 합칠 수 있음
+- 공통 표준 구조 **project-structure/1.0** (프로젝트 ID `TAAS`) — 규약 `02_Strategy/03_User/프로젝트구조_규약_v1.0.docx`, 프로젝트 정보 `PROJECT.json`, 지금 상태 `05_UserComments/STATUS.md`
+- 패널: 탐색 / 상관관계 분석(분석 묶음) / 통계 기법(추세·그레인저·다중회귀·주성분·중단 시계열) / 차량기술 매핑 — 온라인 게시본은 `PROJECT.json` 의 `panel_url`
+- 이전 구조(v1.6)는 git 브랜치 `archive/pre-standard-v1.6` 에 압축본과 함께 보관
 
-## 빠른 시작
+## 폴더
+
+| 위치 | 내용 |
+|---|---|
+| `Main_TAAS.bat` | 시작 — 인자 없음: 프로젝트 홈 · `main` 메인 패널 · `serve` 로컬 서버(업데이트 버튼) · `update` · `sync`(바뀐 파일만) · `build` · `online` |
+| `install.bat` | 의존성 설치(B) · 확인만(V — 글꼴·Office 열기 시험) |
+| `_source/` | 코드 — `build.py`(라이브러리·패널 조립) · `serve.py` · `src/` · `collector/` · `panel/panel_template.html` · `ops/`(자동 갱신·검증·PC 동기화) · `tests/` · `build/`(표준 키트·문서 생성기) · `strategy/`(문서 원천·CHANGELOG) · 경로 정의 `taas_paths.py` |
+| `01_Panel/` | `Home/` 프로젝트 홈(폴더·파일 지도) · `Main/` 메인 패널(오프라인판·온라인 게시본 — 빌드 생성물) |
+| `02_Strategy/` | `00_History` 변경 이력 · `01_Update/Log` 수집 현황 · `02_Analysis/Workbooks` 분석 워크북 · `03_User` 구조 규약·사용 매뉴얼 · `04_LLM` 자동 갱신·부처 갱신 절차 · `05_Dependencies` 의존성 |
+| `03_References/` | 분류별 참고문헌 색인(Excel) · `02_Statistics/files/` TAAS 수집 원문(json.gz)·부처 원자료(엑셀·CSV) |
+| `04_Libraries/` | `02_Statistics/LIB-TAAS`(생성물 `build/` 는 git 제외)·`LIB-KOSTAT`·`LIB-MOIS`·`LIB-MOLIT`·`LIB-POLICE` · `01_Standard_Law/LIB-POLICY`(제도 연표) · `00_Core/LIB-REFS`(참고문헌 목록) — 각 `library.json` |
+| `05_UserComments/` | `STATUS.md` 지금 상태·다음 할 일 · `01_Requests` 요청 · `03_Prompts` Claude 앱 프롬프트 |
+
+## 빠른 시작 (Windows)
 
 ```bat
 git clone https://github.com/jaykayLee/TAAS_Analysis_for_Safety.git
 cd TAAS_Analysis_for_Safety
-pip install -r 02_Strategy/05_Dependencies/requirements.txt
-python _source/build.py            :: 처음 한 번 약 5분 → 04_Libraries\02_Statistics\LIB-TAAS\build\ 생성
-04_Libraries\02_Statistics\LIB-TAAS\build\panel.html         :: 더블클릭
+install.bat                 :: B = 빌드용 설치 (Python·Node·pandoc + 패키지)
+Main_TAAS.bat build         :: 처음 한 번 약 5분 → 04_Libraries\02_Statistics\LIB-TAAS\build 와 01_Panel\Main 생성
+Main_TAAS.bat               :: 프로젝트 홈 → 메인 패널
 ```
 
-Windows 에서는 `빌드_실행.bat` 을 더블클릭해도 됩니다.
+## 업데이트
 
-## 온라인 패널과 자동 갱신 (claude.ai)
-
-전체 데이터(장표 340개)가 들어간 패널이 claude.ai 아티팩트로 게시되어 있습니다 (`_source/ops/auto_update.json` 의 `artifact_url`).
-
-오른쪽 위 **[업데이트]** → **▶ 지금 갱신 실행** 을 누르면 예약 작업 *TAAS Analysis for Safety* 가 새 Claude 세션을 열어 아래를 진행하고, 단계가 바뀔 때마다 창에 표시됩니다.
-
-1. **실행 환경 확인** — 사용자 PC 연결과 Claude 앱 브라우저 (TAAS·KOSIS 는 클라우드에서 접속되지 않아 PC 브라우저가 필요)
-2. **브라우저 실행** — TAAS 상세통계 페이지를 열고 수집기(`_source/collector/browser/*.js`) 주입
-3. **수집** — TAAS 최신 연도를 확인해 저장소에 없는 연도만 수집 (`taas_update.js`)
-4. **업데이트** — `_source/build.py` → `_source/ops/verify.py` → GitHub PR 병합 → 같은 주소로 패널 재게시
-
-PC가 꺼져 있거나 Claude 앱이 닫혀 있으면 상태가 **"Claude 앱에서 진행이 필요합니다"** 로 바뀌고, 창 아래 **Claude 앱에서 직접 실행** 칸에 붙여 넣을 프롬프트(`05_UserComments/03_Prompts/Claude앱_갱신프롬프트_v1.0.md`)가 열립니다. Claude 데스크톱 앱에서 새 대화에 붙여 넣으면 같은 절차(`02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md`)로 진행됩니다.
-
-## 바뀐 파일만 받기 (PC)
-
-```bat
-python _source\ops\pc_sync.py          :: 또는 바뀐파일만_받기.bat
-```
-
-GitHub `main` 과 비교해 **바뀐 파일만** 받아 제자리에 덮어쓰고 패널만 다시 만듭니다(보통 수 초). 전체 zip 을 다시 받을 필요가 없습니다.
-`--check` 를 붙이면 무엇이 바뀌는지만 보여 줍니다. 원본 데이터가 바뀐 업데이트(새 연도)일 때만 `python _source/build.py` 로 전체 조립이 필요하다고 알려 줍니다.
-Claude 가 PC 에 연결돼 있으면 Claude 가 이 스크립트를 직접 실행해 동기화합니다.
-
-## 패널 열기와 업데이트 (PC)
-
-| 방법 | 업데이트 |
+| 방법 | 하는 일 |
 |---|---|
-| **`패널_열기.bat`** (권장) — 로컬 서버(`_source/serve.py`)로 `http://127.0.0.1:8765/panel.html` 을 엽니다 | 오른쪽 위 **[업데이트]** 버튼이 최신 버전을 받아 다시 빌드한 뒤 패널을 새로 고칩니다 |
-| `04_Libraries\02_Statistics\LIB-TAAS\build\panel.html` 더블클릭 | 버튼은 새 버전 여부만 알려 줍니다 → `업데이트.bat` 실행 |
+| `Main_TAAS.bat sync` | GitHub `main` 과 비교해 **바뀐 파일만** 받아 제자리에 덮어쓰고(이름만 바뀐 파일은 이동) 패널만 다시 만듦(수 초). TAAS 원문이 바뀐 업데이트일 때만 전체 조립이 필요하다고 알려 줌 |
+| `Main_TAAS.bat serve` → 패널 **[업데이트]** | 로컬 서버가 `git pull`(또는 zip) → `_source/build.py` 실행 후 패널을 새로 고침 |
+| 온라인 패널 **[업데이트] → ▶ 지금 갱신 실행** | 예약 작업 *TAAS Analysis for Safety* 가 ① 실행 환경 확인 ② 브라우저 실행 ③ 수집 ④ 업데이트(빌드·검증·PR 병합·재게시) — 절차 `02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md`. PC·Claude 앱이 꺼져 있으면 `05_UserComments/03_Prompts/Claude앱_갱신프롬프트_v1.0.md` 를 Claude 앱에 붙여 넣어 진행 |
 
-버튼 아래에 **업데이트 시각**(이 PC에서 마지막으로 빌드한 때)과 **버전**(커밋·날짜, 최신 여부)이 표시됩니다. 새 버전이 있으면 버튼이 노란색으로 바뀝니다.
-
-업데이트가 하는 일:
-1. 내려받기 — 이 폴더가 git 저장소면 `git pull --ff-only`, 아니면 GitHub 최신본 zip 으로 덮어쓰기(공개 저장소일 때, 로컬 수정은 덮임)
-2. `python _source/build.py` — 원본(`data/raw`)이 바뀌었으면 라이브러리 전체 조립(약 4분), 아니면 패널만(수 초)
-
-명령으로 직접 하려면:
-
-```bat
-git pull
-python _source/build.py
-```
-
-`04_Libraries\02_Statistics\LIB-TAAS\build\build_info.json` 에 버전·빌드 시각이, `04_Libraries\02_Statistics\LIB-TAAS\build\.build_manifest.json` 에 원본 해시가 남습니다.
-
-`_source/build.py` 는 `04_Libraries\02_Statistics\LIB-TAAS\build\.build_manifest.json` 에 원본 해시를 남겨, 원본(`data/raw`)이나 조립 스크립트가 바뀐 경우에만 데이터를 다시 만듭니다.
-`04_Libraries\02_Statistics\LIB-TAAS\build\` 는 생성물이라 git 에 올리지 않습니다.
-
-### 새 연도(예: 2026) 통계가 공개되면
-
-1. `_source\collector\` 로 2026년을 수집하고 원본을 내보냅니다 → `taas_raw_full_2026.json.gz`
-   ```bat
-   cd collector
-   python -m taas_collector run --from 2026 --to 2026 --refresh-meta
-   python -m taas_collector export ..\03_References\02_Statistics\files\taas\taas_raw_full_2026.json.gz --from 2026 --to 2026
-   ```
-2. `python _source/build.py` → 새 원본이 자동 포함됩니다. 같은 장표·구간이 겹치면 **더 늦게 수집한 값**이 쓰입니다(2025년 확정치 재수집 등).
-3. 검증(아래) 후 `03_References/02_Statistics/files/taas/` 의 새 파일과 `_source/strategy/CHANGELOG.md` 를 커밋합니다.
-
-## 폴더 구성
-
-| 경로 | 내용 |
-|---|---|
-| `_source/build.py`, `빌드_실행.bat` | 원본 → 라이브러리·패널 한 번에 만들기 |
-| `ops/` | 자동 갱신 절차서(TAAS `AUTO_UPDATE.md`, 부처 자료 `EXT_UPDATE.md`)·설정(`auto_update.json`, 부처 수집 목록 `ext_sources.json`)·Claude 앱 프롬프트·상태 점검·검증(`verify.py`, `verify_ext.py`)·게시 계획 |
-| `_source/serve.py`, `패널_열기.bat`, `업데이트.bat` | 로컬 서버로 패널 열기(업데이트 버튼 동작) / 업데이트만 실행 |
-| `03_References/02_Statistics/files/taas/` | TAAS 수집 원본 (5년 단위 json.gz) |
-| `04_Libraries/<분류>/LIB-<부처>/<부처>.json.gz/` | 부처별 외부 라이브러리 원본 (kostat 통계청 · mois 행정안전부 · molit 국토교통부 · police 경찰청 · policy 제도 연표) |
-| `03_References/02_Statistics/files/<부처>/` | 부처 원자료 — KOSIS 수집 결과(`kosis/*.csv.gz`), 인구총조사 엑셀, 어린이보호구역·제도 연표 CSV (`python _source/build.py --ext [부처]` 로 원본 재생성) |
-| `_source/src/` | 라이브러리 조립(`build_library.py`), 패널 생성(`build_panel.py`), 새 연도 통합(`update_library.py`), 엑셀(`build_excel.py`), 부처 자료 변환(`make_ext_raw.py`, 인구총조사 `make_pop_raw.py`), Python 로더(`taas.py`) |
-| `_source/panel/panel_template.html` | 분석 패널 원본 (모든 화면 기능·통계 기법 코드) |
-| `_source/collector/` | TAAS 수집기 (Python + Playwright, v9 직접 조회 전략), KOSIS 수집기(`browser/kosis_collect.js`, OpenAPI 또는 화면 다운로드) |
-| `docs/` | 사용 매뉴얼(pptx)과 매뉴얼 생성 코드, 수집 현황·2025 엑셀·분석 결과 |
-| `_source/tests/` | 패널 자동 시험(Playwright), 통계 기법 계산 검증(statsmodels·pymannkendall 대조) |
-| `04_Libraries/02_Statistics/LIB-TAAS/build/` | **생성물 (git 제외)** — `panel.html`, `index.js`, `panel_js/`, `parquet/` 등 · 부처 라이브러리 `ext/<부처>/` · 부처 장표 목록 `ext_index.json` |
+새 연도 TAAS 를 수동으로 넣을 때: `_source/collector` 로 수집 → `03_References/02_Statistics/files/taas/` 에 `taas_raw_full_<연도>.json.gz` → `python _source/build.py` → 검증 → 커밋.
 
 ## 데이터
 
@@ -112,17 +57,19 @@ python _source/build.py
 - 9101~9304 는 KOSIS 에서 부처마다 따로 받습니다(`02_Strategy/04_LLM/LLM전략_부처자료갱신절차_v1.0.md`). 아직 받지 않은 장표는 목록에 나오지 않습니다.
 - 인구총조사(9001) 실측 연도: 2005, 2010, 2015~2025 (2006~09·2011~14는 `인구_연간보간[명]` 직선 보간). 매년 실측이 필요하면 주민등록인구(9102)를 분모로 쓰세요.
 - 패널 '비율 환산'은 분모 계열과 배율(10만·1만·1천·%·1억)을 고릅니다 — 예: 사고 ÷ 자동차 등록대수 × 1만, 사망 ÷ 주행거리(대·km) × 1억.
-- Python: `from taas import Taas; t = Taas("library"); t.search("어린이")` (자세한 사용법은 `_source/src/LIBRARY_README.md`)
+- Python: `from taas import Library; t = Library("04_Libraries/02_Statistics/LIB-TAAS/build"); t.search("어린이")` (자세한 사용법은 `_source/src/LIBRARY_README.md`)
 
 ## 검증
 
 ```bat
-python _source\tests\stats\verify_stats.py      :: 통계 기법 계산값을 statsmodels 등과 대조 (패널 시험 결과 파일 필요)
-python _source\tests\panel\test_stats.py library out\st   :: 패널에서 5개 기법 실행 (Playwright)
-python _source\collector\_source\tests\test_parser.py   :: TAAS 응답 파서
+python _source\ops\verify.py                       :: 2025 전국 193,889건(134개 장표) 일치 · 부상 = 중상+경상+부상신고 · 중복 셀 0
+python _source\ops\verify_ext.py                   :: 부처 라이브러리
+python _source\tests\panel\test_stats.py "%CD%\04_Libraries\02_Statistics\LIB-TAAS\build" out\st
+python _source\tests\stats\verify_stats.py out\st :: 통계 기법 계산값을 statsmodels 등과 대조 → MISMATCHES 0
+python _source\collector\tests\test_parser.py     :: TAAS 응답 파서
 ```
 
-라이브러리 점검 기준: 연도별 전국 사고건수(2025 = 193,889건) 장표 간 일치, 부상 = 중상 + 경상 + 부상신고, 중복 셀 0.
+문서·홈·색인을 다시 만들 때: `python _source\build\project_meta.py --version <버전>` → `cd _source && python build\strategy\docset.py --version <버전>` → `python build\template\home.py --version <버전>` (Office 호환성 검사 자동, 실패 0이어야 전달).
 
 ## 주의
 

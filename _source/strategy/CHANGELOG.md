@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 2026-11-23 — v2.0 표준 구조 전환 3단계(패널·시작 파일) — 전환 완료
+
+- 메인 패널을 `01_Panel/Main/` 에 생성: `TAAS_분석패널_offline.html`(PC 에서 여는 판, `<base>` 로 라이브러리 생성물을 읽어 데이터 복사 없음)·`TAAS_분석패널.html`(온라인 게시본). 첫 화면은 `01_Panel/Home/프로젝트_홈_v*.html`
+- 시작 파일 통합: `패널_열기·업데이트·빌드_실행·바뀐파일만_받기.bat` → `Main_TAAS.bat`(인자 없음=홈, main·serve·update·sync·build·online), 의존성 `install.bat`
+- `serve.py` 는 프로젝트 루트를 열고 메인 패널로 안내(패널의 [업데이트] 버튼 그대로 동작), 게시 계획은 `01_Panel/Main/TAAS_분석패널.html` 을 페이지로 씀
+- `README.md`·`CLAUDE.md`·자동 갱신 절차·예약 작업 프롬프트를 새 경로로 갱신
+
 ## 2026-11-23 — v1.8 표준 구조 전환 2단계(코드·데이터 이동)
 
 - 코드 → `_source/`(build.py·serve.py·src·collector·panel 원천·ops 스크립트·tests·매뉴얼 생성기·분석 스크립트), 경로는 `_source/taas_paths.py` 한 곳에서 정의

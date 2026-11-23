@@ -38,7 +38,7 @@ TAAS 와 따로 조립·갱신되는 부처 통계입니다. 폴더 구성은 �
 | `ext/policy` | 제도 연표 | 9901 제도 시행 연도 더미 |
 
 `ext_index.json` 은 부처 장표 목록과 제도 연표(events)를 합친 것으로, 패널이 TAAS 목록 뒤에 붙여 보여 줍니다.
-Python: `lib = taas.Library("library"); lib.libs(); lib.ext("molit").series(9201, measure="등록대수[대]", 시도="전국")`
+Python: `lib = taas.Library("04_Libraries/02_Statistics/LIB-TAAS/build"); lib.libs(); lib.ext("molit").series(9201, measure="등록대수[대]", 시도="전국")`
 
 ## 데이터 구조 (facts)
 

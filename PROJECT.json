@@ -2,7 +2,7 @@
  "schema": "project/1.0",
  "id": "TAAS",
  "name": "TAAS 교통사고 분석",
- "version": "v1.8",
+ "version": "v2.0",
  "structure": {
   "contract": "project-structure/1.0",
   "doc": "02_Strategy/03_User/프로젝트구조_규약_v1.0.docx"

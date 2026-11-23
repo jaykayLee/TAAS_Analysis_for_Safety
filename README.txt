@@ -1,4 +1,4 @@
-TAAS 교통사고 분석 (TAAS) — v1.8
+TAAS 교통사고 분석 (TAAS) — v2.0
 ================================================
 시작: Main_TAAS.bat (프로젝트 홈 → 메인 패널) · 프로젝트 정보: PROJECT.json · 지금 상태: 05_UserComments/STATUS.md
 온라인 패널: https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune
@@ -16,13 +16,11 @@ TAAS 교통사고 분석 (TAAS) — v1.8
    04_Libraries/      References 정보를 시스템이 쓰는 라이브러리로 정제 — 03과 같은 분류
    05_UserComments/   사용자가 결과를 보며 요청·결정한 내용 — 항상 현재 상태(STATUS)를 남김
 
-이번 버전: 2026-11-23 — v1.8 표준 구조 전환 2단계(코드·데이터 이동)
-- 코드 → `_source/`(build.py·serve.py·src·collector·panel 원천·ops 스크립트·tests·매뉴얼 생성기·분석 스크립트), 경로는 `_source/taas_paths.py` 한 곳에서 정의
-- TAAS 수집 원문·부처 원자료 → `03_References/02_Statistics/files/`(taas·kostat·police), 부처 원천 → `04_Libraries/02_Statistics/LIB-KOSTAT·LIB-POLICE`, 제도 연표·근거 → `04_Libraries/01_Standard_Law/LIB-POLICY`
-- 라이브러리 생성물 → `04_Libraries/02_Statistics/LIB-TAAS/build/`(git 제외). 원본 서명은 파일 이름 기준이라 폴더를 옮겨도 다시 조립하지 않음
-- 문서 → 02_Strategy(자동 갱신·부처 갱신 절차 → 04_LLM, 사용 매뉴얼 → 03_User, 수집 현황 → 01_Update/Log, 분석 워크북 → 02_Analysis/Workbooks), Claude 앱 프롬프트 → `05_UserComments/03_Prompts/`
-- `pc_sync.py`: 이름·위치만 바뀐 파일은 다시 받지 않고 그 자리로 옮김, 예전 `library/` 를 새 위치로 옮김
-- 검증: 2025 전국 193,889건·부상 합 불일치 0, 부처 라이브러리 ok, 통계 기법 대조 MISMATCHES 0, 패널·부처 시험 통과
+이번 버전: 2026-11-23 — v2.0 표준 구조 전환 3단계(패널·시작 파일) — 전환 완료
+- 메인 패널을 `01_Panel/Main/` 에 생성: `TAAS_분석패널_offline.html`(PC 에서 여는 판, `<base>` 로 라이브러리 생성물을 읽어 데이터 복사 없음)·`TAAS_분석패널.html`(온라인 게시본). 첫 화면은 `01_Panel/Home/프로젝트_홈_v*.html`
+- 시작 파일 통합: `패널_열기·업데이트·빌드_실행·바뀐파일만_받기.bat` → `Main_TAAS.bat`(인자 없음=홈, main·serve·update·sync·build·online), 의존성 `install.bat`
+- `serve.py` 는 프로젝트 루트를 열고 메인 패널로 안내(패널의 [업데이트] 버튼 그대로 동작), 게시 계획은 `01_Panel/Main/TAAS_분석패널.html` 을 페이지로 씀
+- `README.md`·`CLAUDE.md`·자동 갱신 절차·예약 작업 프롬프트를 새 경로로 갱신
 
-라이브러리 다시 만들기: python _source/build.py   · 바뀐 파일만 받기: python _source/ops/pc_sync.py
+Main_TAAS.bat 인자: (없음)=홈 · main · serve(업데이트 버튼) · update · sync(바뀐 파일만) · build · online
 생성물 — _source/build/project_meta.py
