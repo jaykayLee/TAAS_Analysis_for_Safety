@@ -7,7 +7,7 @@
 
 ## 요청(01_Requests)
 
-- [완료] `REQ-20261123-01_표준구조_전환.md` — 공통 표준 구조 전환 1~3단계(v1.7·v1.8·v2.0). 남은 확인: Windows 에서 `install.bat` → V(Office 열기 시험)
+- [완료] `REQ-20261123-01_표준구조_전환.md` — 공통 표준 구조 전환 1~3단계(v1.7·v1.8·v2.0), PC 폴더·온라인 패널(version 13)·예약 작업 프롬프트 반영 완료. 남은 확인: Windows 에서 `install.bat` → V(Office 열기 시험), PC 최상위의 이전 자료 3개(`TAAS Analysis_old/`·`TAAS_Analysis_for_Safety_전체_v1.2.zip`·`TAAS_library_v1.4_변경분.zip`) 정리 여부
 
 ## 결정 묶음(02_Decisions)
 
@@ -32,7 +32,7 @@
 5. **다음 단계** — 위 계획 문서의 1단계(데이터 보강) → 2단계(주제별 분석, 음주·속도는 지금 가능) → 3단계(차량 기술 대응 매트릭스·종합 보고서·발표 자료·매뉴얼 갱신)
 
 ## 진행 기록
-- 2026-11-23 v2.0 표준 구조(project-structure/1.0) 전환 — 이전 구조는 브랜치 archive/pre-standard-v1.6
+- 2026-11-23 v2.0 표준 구조(project-structure/1.0) 전환 · PC 반영(pc_sync 일괄 추출·library 이동, 연결 폴더 삭제 권한 승인됨) · 게시용 데이터 묶음은 publish_plan 에서 생성 — 이전 구조는 브랜치 archive/pre-standard-v1.6
 - 2026-11-20 다음 단계 계획 문서, PC v1.6 반영 기록
 - 2026-11-16 v1.4 어린이 사고 분석 보고서 https://claude.ai/artifact/MsT8t6q7mTun7qUcBoXzB2
 - 2026-11-18 v1.6 경찰청 공공데이터 4종 + 9302 보충, 패널 분석 묶음, 이 인계 파일
