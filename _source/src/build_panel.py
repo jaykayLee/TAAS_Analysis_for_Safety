@@ -81,10 +81,7 @@ def main(lib, tpl, sample_out=None, online_out=None):
     html = html.replace("/*__SAMPLE__*/", auto + "/*__SAMPLE__*/")
     (lib / "panel.html").write_text(html.replace("/*__SAMPLE__*/", ""), encoding="utf-8")
     if online_out:  # claude.ai 게시용: index.json·online/packs.json·online/pack_*.txt 를 같은 위치에서 받아 씀 (index.js·panel_js 불필요)
-        man = lib / "online" / "packs.json"
-        newest = max(f.stat().st_mtime for f in panel_files(lib).values())
-        if not man.exists() or man.stat().st_mtime < newest:
-            write_online_packs(lib)
+        # 데이터 묶음(online/pack_*.txt)은 게시할 때만 만듦 — _source/ops/publish_plan.py (PC 빌드를 빠르게)
         Path(online_out).write_text(html.replace("/*__SAMPLE__*/", "window.TAAS_ONLINE=1;").replace('<script src="index.js" onerror="void 0"></script>', "").replace('<script src="ext_index.js" onerror="void 0"></script>', ""), encoding="utf-8")
     idx = json.loads((lib / "index.json").read_text(encoding="utf-8"))
     ext = json.loads((lib / "ext_index.json").read_text(encoding="utf-8")) if (lib / "ext_index.json").exists() else {"patterns": [], "libs": {}, "events": []}
