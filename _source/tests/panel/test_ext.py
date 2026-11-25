@@ -65,7 +65,7 @@ async def check(pg, label, errs, online=False):
     out["presets"] = {}
     for k in pr:
         await pg.evaluate(f"()=>document.querySelector('[data-pr={k}]').click()"); await pg.wait_for_timeout(2500)
-        r = await pg.evaluate("()=>{const D=TAAS_DEBUG(); const p=D.yearPool(); return {n:p.length, den:D.S.rateDen, rated:p.filter(c=>/당\)$/.test(c.name)).length}}")
+        r = await pg.evaluate(r"()=>{const D=TAAS_DEBUG(); const p=D.yearPool(); return {n:p.length, den:D.S.rateDen, rated:p.filter(c=>/당\)$/.test(c.name)).length}}")
         assert r["n"] >= 2, (k, r)
         out["presets"][k] = r
     if label != "sample":  # 예시판은 일부 장표만 실어 묶음 대부분이 꺼짐

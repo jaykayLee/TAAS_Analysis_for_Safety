@@ -9,8 +9,8 @@
  "output": "04_Libraries/02_Statistics/LIB-TAAS/build/ext/police",
  "build": "python _source/build.py --ext police",
  "verify": "python _source/ops/verify_ext.py police",
- "note": "KOSIS 면허 9301·9303·9304 는 수집 예정",
+ "note": "KOSIS 면허 9301~9304 2026-11-25 수집(연령대·시도 2019~), 9305~9308 공공데이터포털",
  "category": "02_Statistics",
  "generated_output_in_git": false,
- "updated": "2026-11-23"
+ "updated": "2026-11-25"
 }

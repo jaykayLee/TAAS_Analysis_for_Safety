@@ -1,0 +1,23 @@
+{
+"index.json": "library/index.json",
+"ext_index.json": "library/ext_index.json",
+"build_info.js": "library/build_info.js",
+"build_info.json": "library/build_info.json",
+"online/packs.json": "library/online/packs.json",
+"online/pack_00.txt": "library/online/pack_00.txt",
+"online/pack_01.txt": "library/online/pack_01.txt",
+"online/pack_02.txt": "library/online/pack_02.txt",
+"online/pack_03.txt": "library/online/pack_03.txt",
+"online/pack_04.txt": "library/online/pack_04.txt",
+"online/pack_05.txt": "library/online/pack_05.txt",
+"online/pack_06.txt": "library/online/pack_06.txt",
+"online/pack_07.txt": "library/online/pack_07.txt",
+"online/pack_08.txt": "library/online/pack_08.txt",
+"online/pack_09.txt": "library/online/pack_09.txt",
+"online/pack_10.txt": "library/online/pack_10.txt",
+"online/pack_11.txt": "library/online/pack_11.txt",
+"online/pack_12.txt": "library/online/pack_12.txt",
+"online/pack_13.txt": "library/online/pack_13.txt",
+"online/pack_14.txt": "library/online/pack_14.txt",
+"online/pack_15.txt": "library/online/pack_15.txt"
+}

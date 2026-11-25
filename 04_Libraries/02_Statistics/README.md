@@ -7,9 +7,9 @@ TAAS 사고 통계와 부처 통계(인구·차량·면허·단속)를 시스템
 ## 라이브러리
 - `LIB-TAAS` — TAAS 교통사고 상세통계 (장표 1~7345 (338개 장표)) · 원문 `03_References/02_Statistics/files/taas` · 빌드 `python _source/build.py` · 수집 원문(json.gz)이 곧 원천 — 같은 key 는 ts 가 늦은 것이 이김
 - `LIB-KOSTAT` — 통계청 인구총조사 연령별 인구 (장표 9001·9002) · 원문 `03_References/02_Statistics/files/kostat` · 빌드 `python _source/build.py --ext kostat` · 어린이 0~12세는 5세 단위로 추정
-- `LIB-MOIS` — 행정안전부 주민등록인구 (장표 9101·9102) · 원문 `03_References/02_Statistics/files/mois` · 빌드 `python _source/build.py --ext mois` · 수집 예정(KOSIS OpenAPI 키)
-- `LIB-MOLIT` — 국토교통부 자동차·도로·교통량·주행거리 (장표 9201~9205) · 원문 `03_References/02_Statistics/files/molit` · 빌드 `python _source/build.py --ext molit` · 수집 예정(KOSIS OpenAPI 키)
-- `LIB-POLICE` — 경찰청 보호구역·면허·단속 (장표 9003, 9301~9308) · 원문 `03_References/02_Statistics/files/police` · 빌드 `python _source/build.py --ext police` · KOSIS 면허 9301·9303·9304 는 수집 예정
+- `LIB-MOIS` — 행정안전부 주민등록인구 (장표 9101·9102) · 원문 `03_References/02_Statistics/files/mois` · 빌드 `python _source/build.py --ext mois` · KOSIS OpenAPI 2026-11-25 수집 — 2005~2025 연말 실측(5세별·연령구분)
+- `LIB-MOLIT` — 국토교통부 자동차·도로·교통량·주행거리 (장표 9201~9205) · 원문 `03_References/02_Statistics/files/molit` · 빌드 `python _source/build.py --ext molit` · KOSIS OpenAPI 2026-11-25 수집 — 자동차 시도·차종 2011~(2005~2010 합계), 주행거리 2012~
+- `LIB-POLICE` — 경찰청 보호구역·면허·단속 (장표 9003, 9301~9308) · 원문 `03_References/02_Statistics/files/police` · 빌드 `python _source/build.py --ext police` · KOSIS 면허 9301~9304 2026-11-25 수집(연령대·시도 2019~), 9305~9308 공공데이터포털
 
 ## 규칙
 - 라이브러리 폴더 하나 = `library.json` 하나(버전·파일·적재 테이블·의존)

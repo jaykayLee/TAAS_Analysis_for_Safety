@@ -214,7 +214,24 @@
   const dump = keys => { const o = {}; (keys || Object.keys(st.out)).forEach(k => { o[k] = { meta: st.meta[k], recs: JSON.parse(st.out[k]) } });
     const s = JSON.stringify(o); return '<<KC>>' + s + '<<KC>>' + ' '.repeat(Math.max(0, 120000 - s.length)) };
   const stop = () => { st.blocked = true; return '다음 작업부터 멈춤' };
+  // 결과가 수 MB 이면 한 번에 돌려받지 못함 → CSV 조각(각 약 33만 자)으로 나눠 KC.dumpCsv(0), KC.dumpCsv(1) … 차례로 반환
+  //   클라우드: python _source/src/make_ext_raw.py --import-csv <조각 파일들>
+  function csvParts() {
+    const q = v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v };
+    const parts = []; let cur = {}, sz = 0;
+    for (const [k, v] of Object.entries(st.out)) {
+      const s = ['PRD_DE,C1_NM,C2_NM,C3_NM,C4_NM,ITM_NM,UNIT_NM,DT'].concat(JSON.parse(v).map(r => [r.PRD_DE, r.C1_NM, r.C2_NM, r.C3_NM, r.C4_NM, r.ITM_NM, r.UNIT_NM, r.DT].map(q).join(','))).join('\n');
+      if (s.length > 350000) { const L = s.split('\n'); let i = 1, p = 0; while (i < L.length) { const ch = [L[0]]; let n = 0; while (i < L.length && n < 330000) { ch.push(L[i]); n += L[i].length + 1; i++ } parts.push({ [k + '#' + (p++)]: ch.join('\n') }) } continue }
+      if (sz + s.length > 350000 && sz) { parts.push(cur); cur = {}; sz = 0 }
+      cur[k] = s; sz += s.length;
+    }
+    if (sz) parts.push(cur);
+    return parts;
+  }
+  let _parts = null;
+  const dumpCsv = i => { if (i === 0 || !_parts) _parts = csvParts(); if (i >= _parts.length) return { done: true, parts: _parts.length };
+    return '<<KCSV>>' + JSON.stringify(_parts[i]) + '<<KCSV>>' + ' '.repeat(110000) };
 
-  window.KC = { run, status, dump, stop, info, apiMeta, apiJob, uiJob, csvToRecs };
+  window.KC = { run, status, dump, dumpCsv, stop, info, apiMeta, apiJob, uiJob, csvToRecs };
   return 'KC ready';
 })();
