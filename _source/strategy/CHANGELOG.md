@@ -1,5 +1,10 @@
 # 변경 기록
 
+## 2026-11-25 — v2.2 부처 자료 갱신 예약 작업
+
+- 예약 작업 *TAAS 부처 자료 갱신*(`trig_013LLS3CPRYSTMXMf3PitGM7`, 일정 없음 — 패널 [업데이트] 창의 부처 버튼으로만 실행, 이 PC 필요) — 프롬프트는 `REQ-20261125-01` 초안 8단계
+- `_source/ops/auto_update.json` 의 `ext_trigger_id` 설정 → 패널의 부처 갱신 버튼이 이 예약 작업을 실행
+
 ## 2026-11-25 — v2.1 KOSIS OpenAPI 로 부처 자료 수집(행정안전부·국토교통부·경찰청)
 
 - KOSIS OpenAPI(사용자 인증키, PC 브라우저)로 14표 수집 → 원문 `03_References/02_Statistics/files/<부처>/kosis/`
