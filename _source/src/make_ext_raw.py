@@ -582,8 +582,7 @@ def write(lib, pairs):
     return f
 
 
-def import_dump(path):
-    """KC.dump() 가 돌려준 문자열(도구 결과 파일 포함) → <원자료>/kosis/<key>.csv.gz"""
+def _tool_text(path):
     txt = Path(path).read_text(encoding="utf-8")
     if txt.lstrip().startswith("["):  # 도구 결과 파일: [{type,text}]
         txt = "".join(x.get("text", "") for x in json.loads(txt))
@@ -591,6 +590,35 @@ def import_dump(path):
             txt = json.loads(txt.split("\n\n(captured")[0])
         except Exception:
             pass
+    return txt
+
+
+def import_csv_parts(paths):
+    """KC.dumpCsv(i) 조각들(<<KCSV>>{"lib/key" 또는 "lib/key#n": CSV}<<KCSV>>) → <원자료>/kosis/<key>.csv.gz
+    결과가 클 때(수 MB) 한 번에 돌려받지 못하므로 CSV 조각으로 나눠 받습니다. 같은 key 의 #n 조각은 머리글을 빼고 이어 붙임."""
+    parts = {}
+    for p in paths:
+        m = re.search(r"<<KCSV>>(.*?)<<KCSV>>", _tool_text(p), re.S)
+        if not m:
+            sys.exit(f"{p}: 조각 표식(<<KCSV>>)이 없습니다.")
+        for k, v in json.loads(m.group(1)).items():
+            key, _, n = k.partition("#")
+            parts.setdefault(key, []).append((int(n or 0), v))
+    for key, lst in parts.items():
+        lst.sort()
+        lines = lst[0][1].split("\n")
+        for _, v in lst[1:]:
+            lines += v.split("\n")[1:]
+        lib, k = key.split("/", 1)
+        d = TP.ext_src(lib) / "kosis"; d.mkdir(parents=True, exist_ok=True)
+        with gzip.GzipFile(d / f"{k}.csv.gz", "wb", mtime=0) as g:
+            g.write(("\n".join(l for l in lines if l) + "\n").encode("utf-8"))
+        print(f"  {key}: {len(lines) - 1}행 ({len(lst)}조각) → {TP.rel(d / (k + '.csv.gz'))}")
+
+
+def import_dump(path):
+    """KC.dump() 가 돌려준 문자열(도구 결과 파일 포함) → <원자료>/kosis/<key>.csv.gz"""
+    txt = _tool_text(path)
     m = re.search(r"<<KC>>(.*?)<<KC>>", txt, re.S)
     if not m:
         sys.exit("수집 결과 표식(<<KC>>)을 찾지 못했습니다.")
@@ -613,6 +641,9 @@ def main(argv):
     if argv[:1] == ["--import"]:
         for p in argv[1:]:
             import_dump(p)
+        return
+    if argv[:1] == ["--import-csv"]:
+        import_csv_parts(argv[1:])
         return
     libs = argv or list(LIBS)
     for lib in libs:
