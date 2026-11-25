@@ -246,7 +246,7 @@ def lib_molit():
                 t.put([s, car, use], "등록대수[대]", r["year"], r["v"])
         add_national(t)
         for r in E or []:
-            if "자동차등록대수" in r["item"].replace(" ", "") and r["year"] < 2011:
+            if re.match(r"^자동차등록대수", r["item"].replace(" ", "")) and r["year"] < 2011:  # '1인당 자동차등록대수' 제외
                 s = sido(r["C1"])
                 if s:
                     t.put([s, "계", "계"], "등록대수[대]", r["year"], r["v"])
@@ -280,15 +280,23 @@ def lib_molit():
     A = load("molit", "road_sido")
     if A:
         t = Table(9203, "도로 연장 (시도·도로종류)", "molit", "도로", ["시도", "도로종류"],
-                  ["출처: 국토교통부 「도로현황」 — KOSIS 시·도별 도로현황(DT_MLTM_962), 각 연도 12월 31일 기준", "연장 단위는 원표 그대로(m 또는 km — 수치항목 이름에 표시)"],
+                  ["출처: 국토교통부 「도로현황」 — KOSIS 시·도별 도로현황(DT_MLTM_962), 각 연도 12월 31일 기준", "연장은 원표(m)를 km 로 바꿈. 총연장 = 개통 + 미개통 + 미개설, 포장률 = 포장 ÷ 개통"],
                   kurl("molit", "road_sido"))
         for r in A:
             s = sido(r["C1"])
             if not s or r["v"] is None:
                 continue
             rt = "계" if r["C2"] in ("전체", "계", "총계", "") else r["C2"]
-            unit = f"[{r['unit']}]" if r["unit"] else ""
-            t.put([s, rt], f"{r['item']}{unit}", r["year"], r["v"])
+            it = r["item"]
+            # 원표: 도로종류별 행의 '총연장'은 항목 이름이 그 도로종류(예: 고속국도), 전체 행은 '총계' — 하나로 맞춤. 단위 m → km
+            if it == "총계" or it == r["C2"]:
+                it = "총연장"
+            elif rt != "계" and it in ("고속국도", "일반국도", "특별 광역시도", "지방도", "시도", "군도", "구도"):
+                continue  # 다른 도로종류 이름의 항목은 빈 칸
+            if it == "포장율":
+                t.put([s, rt], "포장률[%]", r["year"], r["v"])
+            else:
+                t.put([s, rt], f"{it}[km]", r["year"], round(r["v"] / 1000, 3))
         out.append(t.rec(sido_order))
     # 9204 평균 일교통량
     A = load("molit", "aadt")
@@ -297,7 +305,7 @@ def lib_molit():
                   ["출처: 국토교통부 「도로교통량조사」 — KOSIS 도로종류별 차종별 평균일교통량과 구성비(DT_MLTM_1240)", "평균 일교통량(AADT, 대/일)은 상시·수시 조사지점 평균 — 지점 구성이 해마다 조금씩 다름"],
                   kurl("molit", "aadt"))
         for r in A:
-            unit = f"[{r['unit']}]" if r["unit"] else ""
+            unit = "[대/일]" if r["item"] == "교통량" else "[%]"  # 원표 단위 칸이 '대/일%' 로 합쳐져 있음
             t.put([r["C1"], r["C2"] or "계"], f"{r['item']}{unit}", r["year"], r["v"])
         out.append(t.rec())
     # 9205 주행거리
@@ -306,14 +314,17 @@ def lib_molit():
         t = Table(9205, "자동차 주행거리 (시도·용도·차종)", "molit", "교통량", ["시도", "용도", "차종"],
                   ["출처: 한국교통안전공단 「자동차주행거리통계」 — KOSIS 용도별 차종별 시군구별 자동차주행거리(DT_426001_N004), 2012~",
                    "2025년부터 산출 방식이 원측정값으로 바뀜(2024년까지 가중 추정치) — 2024→2025 단절 주의",
-                   "사고율 분모로 쓸 때: 연간 주행거리(대·km)로 나누면 '주행거리당 사고' (패널 비율 환산에서 배율 1억)"],
+                   "연간 주행거리는 원표(천㎞)를 ㎞ 로 바꿈. 사고율 분모로 쓸 때: 연간 주행거리로 나누고 배율 1억 → 1억 대·㎞ 당 사고 (패널 분석 묶음 '주행거리당')"],
                   kurl("molit", "vkt_sido"))
         for r in A:
             s = sido(r["C1"])
             if not s:
                 continue
-            unit = f"[{r['unit']}]" if r["unit"] else ""
-            t.put([s, "계" if r["C2"] in ("전체", "계") else r["C2"], "계" if r["C3"] in ("합계", "계") else r["C3"]], f"{r['item']}{unit}", r["year"], r["v"])
+            v, u = r["v"], r["unit"]
+            if u in ("천㎞", "천km") and v is not None:  # 연간 주행거리: 천㎞ → ㎞ (패널 비율 환산 '× 1억' = 1억 대·㎞ 당)
+                v, u = v * 1000, "㎞"
+            unit = f"[{u}]" if u else ""
+            t.put([s, "계" if r["C2"] in ("전체", "계") else r["C2"], "계" if r["C3"] in ("합계", "계") else r["C3"]], f"{r['item']}{unit}", r["year"], v)
         out.append(t.rec(sido_order))
     return out
 
@@ -352,9 +363,15 @@ def lib_police():
         t = Table(9301, f"{LIC} (면허종별)", "police", "운전면허", ["면허종별"],
                   ["출처: 경찰청 「운전면허소지자현황」 — KOSIS 운전면허소지자현황(면허종별, TX_13201_A000), 연말 기준", "한 사람이 여러 종별을 가지면 종별마다 셈 — '총계'는 사람 수"],
                   kurl("police", "lic_type"))
-        for r in A:
-            k = "총계" if r["C1"] in ("총계", "계") else r["C1"]
-            t.put([k], "소지자[명]", r["year"], r["v"])
+        grp, seen = {}, {}
+        for r in A:  # 원표 순서: 총계, (1종) 소계·대형·보통·소형·특수, (2종) 소계·보통·소형·원자 — 이름이 겹쳐 순서로 1종/2종 구분
+            y, n = r["year"], r["C1"]
+            if n in ("총계", "계"):
+                t.put(["총계"], "소지자[명]", y, r["v"]); continue
+            if n == "소계":
+                seen[y] = seen.get(y, 0) + 1; grp[y] = "1종" if seen[y] == 1 else "2종"
+                t.put([grp[y]], "소지자[명]", y, r["v"]); continue
+            t.put([f"{grp.get(y, '1종')} {n}"], "소지자[명]", y, r["v"])
         out.append(t.rec())
     A, B = load("police", "lic_sex_2005"), load("police", "lic_sex")
     G = TP.ext_src("police") / "datagokr" / "운전면허소지자_성별_15048417.csv"

@@ -2,15 +2,15 @@
  "schema": "library/1.0",
  "id": "LIB-MOLIT",
  "name": "국토교통부 자동차·도로·교통량·주행거리",
- "version": "-",
+ "version": "2025",
  "pids": "9201~9205",
  "source": "03_References/02_Statistics/files/molit",
  "raw": "04_Libraries/02_Statistics/LIB-MOLIT/molit.json.gz",
  "output": "04_Libraries/02_Statistics/LIB-TAAS/build/ext/molit",
  "build": "python _source/build.py --ext molit",
  "verify": "python _source/ops/verify_ext.py molit",
- "note": "수집 예정(KOSIS OpenAPI 키)",
+ "note": "KOSIS OpenAPI 2026-11-25 수집 — 자동차 시도·차종 2011~(2005~2010 합계), 주행거리 2012~",
  "category": "02_Statistics",
  "generated_output_in_git": false,
- "updated": "2026-11-23"
+ "updated": "2026-11-25"
 }

@@ -29,24 +29,24 @@ TAAS 와 같습니다(`02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md` 
 
 ## 2. 브라우저
 1. 상태: `browser, step=2`.
-2. 새 탭에서 `https://kosis.kr/` 를 엽니다. **KOSIS 는 짧은 시간에 화면을 여러 번 열면 '비정상적인 서비스 이용'으로 접속을 막습니다** — 아래 순서를 지키고, 차단 문구가 보이면 즉시 멈춥니다(상태 `error`, message "KOSIS 접속 차단 — 몇 시간 뒤 다시").
-3. 수집기 주입: 저장소 `main` 의 `_source/collector/browser/kosis_collect.js` 를 `fetch('https://raw.githubusercontent.com/jaykayLee/TAAS_Analysis_for_Safety/main/collector/browser/kosis_collect.js')` 로 받아 `(0,eval)(src)` → `'KC ready'`.
+2. 새 탭에서 `https://kosis.kr/robots.txt` 를 엽니다(가벼운 kosis.kr 페이지 — OpenAPI 를 같은 출처에서 부름). **KOSIS 는 짧은 시간에 화면을 여러 번 열면 '비정상적인 서비스 이용'으로 접속을 막습니다** — 아래 순서를 지키고, 차단 문구가 보이면 즉시 멈춥니다(상태 `error`, message "KOSIS 접속 차단 — 몇 시간 뒤 다시").
+3. 수집기 주입: 저장소 `main` 의 `_source/collector/browser/kosis_collect.js` 를 `fetch('https://raw.githubusercontent.com/jaykayLee/TAAS_Analysis_for_Safety/main/_source/collector/browser/kosis_collect.js')` 로 받아 `(0,eval)(src)` → `'KC ready'`.
 
 ## 3. 수집
 1. 상태: `collect, step=3`.
 2. 대상: `_source/ops/ext_sources.json` 의 `libs.<lib>.kosis`. `to` 는 **올해-1** 까지(그 연도가 아직 없으면 KOSIS 가 빈 결과를 줌). `from` 은 그대로(전체 다시 받기 — 과거 수정치 반영).
    key 는 `<lib>/<key>` 로 넘깁니다.
-3. **OpenAPI 키가 있으면**(사용자가 준 키, 또는 `_source/ops/auto_update.json` 의 `kosis_api_key`) `KC.run(jobs, {apiKey})` — 화면을 열지 않음(권장).
+3. **OpenAPI 키**: 사용자 PC 연결 폴더 `Claude_Projects` 의 `KOSIS_통계_OpenAI 인증키.txt`(연결 셸 `cat "$HOME/mnt/Claude_Projects/KOSIS_통계_OpenAI 인증키.txt"`) 또는 Claude 앱 대화에서 받은 키로 `KC.run(jobs, {apiKey})` — 화면을 열지 않음(권장, 2026-11-25 확인: 14표 약 1분).
    없으면 `KC.run(jobs)` — 화면 다운로드, 표 사이 60초 간격. 표가 7개면 약 10분.
 4. `KC.status()` 를 1~2분마다 확인 → `running:false`. `blocked:true` 면 멈춤(위 2-2). `errors` 가 있는 표는 message 에 적고 계속.
-5. 내보내기: `KC.dump()` 의 반환값을 **그대로 마지막 식으로 반환**합니다(10만 자 이상이라 도구가 결과를 파일로 저장 — 경로가 안내됨).
-   `python _source/src/make_ext_raw.py --import <그 파일>` → `03_References/02_Statistics/files/<lib>/kosis/<key>.csv.gz`(+ `.meta.json`).
+5. 내보내기: `KC.dumpCsv(0)`, `KC.dumpCsv(1)` … 을 `{done:true}` 가 나올 때까지 하나씩 **마지막 식으로 반환**합니다(조각마다 10만 자 이상이라 도구가 결과를 파일로 저장 — 경로가 안내됨. 한 번에 수 MB 를 돌려주는 `KC.dump()` 는 도구가 잘라 버림).
+   `python _source/src/make_ext_raw.py --import-csv <조각 파일들>` → `03_References/02_Statistics/files/<lib>/kosis/<key>.csv.gz`. 행 수가 `KC.status()`·`__kc.meta[key].rows` 와 같은지 확인.
 
 ## 4. 업데이트
 1. 상태: `build, step=4`.
 2. `python _source/build.py --ext <lib>` (그 부처 원본만 다시 만들고 그 부처 라이브러리만 조립).
 3. `python _source/ops/verify_ext.py <lib>` → `ok:false` 면 상태 `error` 로 멈춤(커밋하지 않음).
-4. 바뀐 것이 없으면(`git status` 에 `data/` 변화 없음) 상태 `no_new_data` 로 끝.
+4. 바뀐 것이 없으면(`git status` 에 `03_References`·`04_Libraries` 변화 없음) 상태 `no_new_data` 로 끝.
 5. `_source/strategy/CHANGELOG.md` 맨 위에 `## <날짜> — <부처> 자료 갱신 (자동)` 과 장표·연도 범위 한 줄.
 6. 브랜치 `claude/ext-<lib>-<YYYYMMDD-HHMM>` 커밋 → push → PR → 병합(`02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md` 4-5 와 같은 방법).
 7. 패널 재게시: 상태 `publish`. `python _source/build.py` → `python _source/ops/publish_plan.py` → `Artifact` read 후 publish(**`capabilities` 넘기지 않음**).
@@ -54,4 +54,5 @@ TAAS 와 같습니다(`02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md` 
 
 ## OpenAPI 키
 KOSIS OpenAPI(무료, kosis.kr 로그인 → OpenAPI → 활용신청)로 받으면 화면을 열지 않아 차단 걱정이 없습니다.
-키는 저장소에 올리지 않습니다 — 패널 db 문서 `ops/secrets` 같은 곳도 다른 사람이 볼 수 있으니 쓰지 말고, 실행 메시지나 Claude 앱 대화에서 받습니다.
+키는 저장소에 올리지 않습니다 — 패널 db 문서 `ops/secrets` 같은 곳도 다른 사람이 볼 수 있으니 쓰지 말고, 사용자 PC 의 키 파일(위 3-3)이나 Claude 앱 대화에서 받습니다.
+클라우드와 PC 연결 셸은 kosis.kr 에 접속하지 못합니다(2026-11-25 확인) — 수집은 PC 브라우저에서만.
