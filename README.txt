@@ -1,4 +1,4 @@
-TAAS 교통사고 분석 (TAAS) — v2.2
+TAAS 교통사고 분석 (TAAS) — v2.3
 ================================================
 시작: Main_TAAS.bat (프로젝트 홈 → 메인 패널) · 프로젝트 정보: PROJECT.json · 지금 상태: 05_UserComments/STATUS.md
 온라인 패널: https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune
@@ -16,9 +16,12 @@ TAAS 교통사고 분석 (TAAS) — v2.2
    04_Libraries/      References 정보를 시스템이 쓰는 라이브러리로 정제 — 03과 같은 분류
    05_UserComments/   사용자가 결과를 보며 요청·결정한 내용 — 항상 현재 상태(STATUS)를 남김
 
-이번 버전: 2026-11-25 — v2.2 부처 자료 갱신 예약 작업
-- 예약 작업 *TAAS 부처 자료 갱신*(`trig_013LLS3CPRYSTMXMf3PitGM7`, 일정 없음 — 패널 [업데이트] 창의 부처 버튼으로만 실행, 이 PC 필요) — 프롬프트는 `REQ-20261125-01` 초안 8단계
-- `_source/ops/auto_update.json` 의 `ext_trigger_id` 설정 → 패널의 부처 갱신 버튼이 이 예약 작업을 실행
+이번 버전: 2026-11-26 — v2.3 PC 폴더 자동 동기화
+- 예약 작업 *TAAS PC 동기화*(`trig_01PrVhbHL2T2LgZa4fgdXR1m`, 일정 없음, 이 PC 필요, 자동 승인) + 절차서 `02_Strategy/04_LLM/LLM전략_PC동기화절차_v1.0.md`(상태 db `ops/last_sync`)
+- 자동 갱신(4-8)·부처 자료 갱신(4-9) 절차 끝에 PC 동기화 단계 추가 → 갱신이 `main` 에 병합되면 PC 폴더도 그 자리에서 맞춤
+- 패널 [업데이트] 창에 'PC 폴더' 줄: PC 버전 ↔ 게시된 패널 버전 비교, **PC 폴더 맞추기** 버튼(두 번 눌러 실행)
+- `build.py` — 삭제가 막힌 폴더(PC 연결 셸)에서는 이전 라이브러리를 지우지 않고 `_to_delete/` 로 옮김
+- 부처 자료 안내 문구를 표준 구조 경로로 고침
 
 Main_TAAS.bat 인자: (없음)=홈 · main · serve(업데이트 버튼) · update · sync(바뀐 파일만) · build · online
 생성물 — _source/build/project_meta.py

@@ -78,6 +78,18 @@ async def check(pg, label, errs, online=False):
         rows = await pg.evaluate("()=>document.querySelectorAll('#extRows .extrow').length")
         out["ext_rows"] = rows
         assert rows >= 3, rows
+        # PC 폴더 맞추기: 가짜 커넥터로 두 번 눌러 fire_trigger(sync_trigger_id) 가 불리는지
+        await pg.evaluate("""()=>{ const U=window.TAAS_DEBUG().UO; window._calls=[];
+          U.mcp={callTool:async(s,t,a)=>{ window._calls.push([t,a]); return {payload:{data:[]}} }};
+          document.getElementById('updClose').click(); document.getElementById('btnUpd').click() }""")
+        await pg.wait_for_timeout(300)
+        await pg.evaluate("()=>document.getElementById('syncFire').click()")
+        await pg.wait_for_timeout(100)
+        await pg.evaluate("()=>document.getElementById('syncFire').click()")
+        await pg.wait_for_timeout(300)
+        calls = await pg.evaluate("()=>window._calls.filter(c=>c[0]==='fire_trigger').map(c=>c[1].trigger_id)")
+        out["sync_fire"] = calls
+        assert calls == [json.load(open(Path(__file__).resolve().parents[2] / "ops" / "auto_update.json", encoding="utf-8"))["sync_trigger_id"]], calls
     assert not errs, errs
     print(label, json.dumps(out, ensure_ascii=False))
 

@@ -13,5 +13,9 @@
  "ext_trigger_id": "trig_013LLS3CPRYSTMXMf3PitGM7",
  "ext_runbook": "02_Strategy/04_LLM/LLM전략_부처자료갱신절차_v1.0.md",
  "ext_app_prompt": "05_UserComments/03_Prompts/Claude앱_부처갱신프롬프트_v1.0.md",
- "ext_status_doc": "ops/last_run_<lib>"
+ "ext_status_doc": "ops/last_run_<lib>",
+ "sync_task_name": "TAAS PC 동기화",
+ "sync_trigger_id": "trig_01PrVhbHL2T2LgZa4fgdXR1m",
+ "sync_runbook": "02_Strategy/04_LLM/LLM전략_PC동기화절차_v1.0.md",
+ "sync_status_doc": "ops/last_sync"
 }

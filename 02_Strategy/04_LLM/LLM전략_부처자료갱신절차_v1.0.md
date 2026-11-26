@@ -51,6 +51,7 @@ TAAS 와 같습니다(`02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md` 
 6. 브랜치 `claude/ext-<lib>-<YYYYMMDD-HHMM>` 커밋 → push → PR → 병합(`02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md` 4-5 와 같은 방법).
 7. 패널 재게시: 상태 `publish`. `python _source/build.py` → `python _source/ops/publish_plan.py` → `Artifact` read 후 publish(**`capabilities` 넘기지 않음**).
 8. 상태: `done, finished, version=<병합 커밋>, collected=[<key>…], panel_published=true, message="<부처> 갱신 — 장표 n개, ~<최신 연도>"`.
+9. **PC 폴더 동기화**(병합한 경우에만): `02_Strategy/04_LLM/LLM전략_PC동기화절차_v1.0.md` 1~4 단계를 그대로 수행해 사용자 PC 폴더를 방금 병합한 `main` 으로 맞추고, 상태 문서 `ops/last_sync` 를 `source=after_update` 로 기록합니다. PC 셸을 쓸 수 없으면 `ops/last_sync` 를 `needs_pc` 로 남기고 이 갱신 자체는 `done` 으로 둡니다(패널의 'PC 폴더 맞추기' 버튼이나 PC 의 `Main_TAAS.bat sync` 로 나중에 맞춤). 끝나면 4-8 의 기록에 `pc_synced=true|false` 를 더합니다.
 
 ## OpenAPI 키
 KOSIS OpenAPI(무료, kosis.kr 로그인 → OpenAPI → 활용신청)로 받으면 화면을 열지 않아 차단 걱정이 없습니다.

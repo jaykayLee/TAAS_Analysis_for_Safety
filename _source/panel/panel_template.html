@@ -457,10 +457,15 @@ table.corr td.sel{outline:2px solid var(--fg)}
     <div class="dlgrow"><button class="btn primary small" id="appCopy" type="button">프롬프트 복사</button><span class="dlgnote" id="appCopied"></span></div>
   </details>
   <div class="extbox" id="extBox"><h4>부처 자료 — 부처마다 따로 갱신</h4>
-    <div class="dlgnote">TAAS 와 별도 라이브러리(<code>library/ext/부처</code>)입니다. 갱신 버튼은 그 부처 통계만 KOSIS 등에서 새로 받아 그 부처 라이브러리만 다시 만듭니다(예약 작업 <b id="extTaskNm">TAAS 부처 자료 갱신</b>, 이 PC 필요).</div>
+    <div class="dlgnote">TAAS 와 별도 라이브러리(<code>04_Libraries/…/LIB-TAAS/build/ext/부처</code>)입니다. 갱신 버튼은 그 부처 통계만 KOSIS 등에서 새로 받아 그 부처 라이브러리만 다시 만듭니다(예약 작업 <b id="extTaskNm">TAAS 부처 자료 갱신</b>, 이 PC 필요).</div>
     <div id="extRows"></div><div class="dlgnote" id="extEnv"></div>
     <details class="appbox" id="extAppBox"><summary>Claude 앱에서 직접 실행 (부처 자료)</summary><textarea id="extPrompt" readonly rows="6" aria-label="부처 자료 갱신 프롬프트"></textarea>
       <div class="dlgrow"><button class="btn primary small" id="extCopy" type="button">프롬프트 복사</button><span class="dlgnote" id="extCopied"></span></div></details>
+  </div>
+  <div class="extbox" id="syncBox"><h4>PC 폴더 — GitHub 최신본으로 맞추기</h4>
+    <div class="dlgnote">위 갱신이 끝나면 PC 폴더도 자동으로 맞춥니다. 따로 맞추려면 아래 버튼을 누르세요 — 바뀐 파일만 받아 제자리에 덮어쓰고 패널을 다시 만듭니다(예약 작업 <b id="syncTaskNm">TAAS PC 동기화</b>, 이 PC 필요, 보통 1~3분). PC 에서 직접: <code>Main_TAAS.bat sync</code></div>
+    <div class="extrow"><span class="nm"><b>PC 폴더</b><br><span class="dlgnote" id="syncVer">–</span></span><span class="st" id="syncSt">기록 없음</span><button class="btn small" id="syncFire" type="button" disabled>PC 폴더 맞추기</button></div>
+    <div class="dlgnote" id="syncEnv"></div>
   </div>
 </div></div>
 <span class="toast" id="toast" role="status" aria-live="polite"></span>
@@ -1606,7 +1611,8 @@ async function runUpdate(){
 const AUTO=window.TAAS_AUTO||null, SRV='Claude Code Remote';
 const UO={mcp:null,doc:null,task:null,env:'',armed:false,firedAt:0,dbOk:null};
 const ST_NM={requested:'실행 요청됨',env_check:'실행 환경 확인 중',browser:'브라우저 실행 중',collect:'수집 중',build:'빌드·검증 중',publish:'패널 다시 게시 중',done:'완료',no_new_data:'새 자료 없음 — 이미 최신',needs_app:'Claude 앱에서 진행이 필요합니다',error:'오류로 멈춤'};
-const RUNNING=new Set(['requested','env_check','browser','collect','build','publish']);
+const RUNNING=new Set(['requested','env_check','browser','collect','build','publish','check','sync']);
+const SYNC_NM={requested:'실행 요청됨',check:'PC 연결 확인 중',sync:'바뀐 파일 받는 중',build:'패널·라이브러리 다시 만드는 중',done:'완료 — 최신',up_to_date:'이미 최신',needs_pc:'PC 연결 필요',error:'오류로 멈춤'};
 const isOnline=()=>S.mode==='online'&&!!AUTO;
 const when=t=>{ if(!t) return '–'; const d=new Date(t); return isNaN(d)?String(t):d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) };
 function mcpErr(e){ const c=(e&&e.code)||''; return ({server_not_connected:'Claude Code Remote 커넥터가 없습니다 — claude.ai 설정 → 커넥터에서 추가하세요.',needs_reauth:'Claude Code Remote 연결이 만료됐습니다 — claude.ai 설정 → 커넥터에서 다시 연결하세요.',
@@ -1669,7 +1675,7 @@ async function fireUpdate(){
   renderDlg();
 }
 /* 부처 자료 갱신: 예약 작업 하나(AUTO.ext_trigger_id)에 lib=<부처> 를 넘겨 부처마다 따로 실행. 상태는 db ops/last_run_<부처> */
-const EXT_MANUAL={policy:'연표 CSV(data/source/ext/policy)를 고친 뒤 빌드', kostat:'인구총조사 엑셀을 data/source/ext/kostat 에 넣고 빌드'};
+const EXT_MANUAL={policy:'연표(04_Libraries/01_Standard_Law/LIB-POLICY)를 고친 뒤 빌드', kostat:'인구총조사 엑셀을 03_References/02_Statistics/files/kostat 에 넣고 빌드'};
 UO.ext={}; UO.extSub=new Set(); UO.extArmed=''; UO.extFired={}; UO.extSel='';
 function extLibs(){ const L=(AUTO&&AUTO.ext_libs)||{}; const I=(S.ext&&S.ext.libs)||{}; const keys=[...new Set([...Object.keys(L),...Object.keys(I)])]; return keys.map(k=>({k,name:(L[k]&&L[k].name)||(I[k]&&I[k].name)||k,info:I[k]||null})) }
 function subExt(){ if(!UO.db) return; for(const {k} of extLibs()){ if(UO.extSub.has(k)) continue; UO.extSub.add(k);
@@ -1694,8 +1700,27 @@ async function fireExt(lib){
     $('#extEnv').innerHTML=`<span class="run">${esc(lib)} 갱신을 요청했습니다.</span> 진행 상태가 이 줄에 표시됩니다.` }
   catch(e){ UO.extFired[lib]=0; $('#extEnv').innerHTML=mcpErr(e) }
   renderExt() }
+/* PC 동기화: 예약 작업 AUTO.sync_trigger_id, 상태 db ops/last_sync. 게시된 패널 버전(TAAS_BUILD.commit)과 PC 버전 비교 */
+UO.sync=null; UO.syncArmed=false; UO.syncFired=0;
+function renderSync(){ const box=$('#syncBox'); if(!box) return; const can=!!(UO.mcp&&AUTO&&AUTO.sync_trigger_id);
+  if(AUTO&&AUTO.sync_task_name) $('#syncTaskNm').textContent=AUTO.sync_task_name;
+  const d=UO.sync||{}, st=d.status||'', run=RUNNING.has(st)&&(Date.now()-new Date(d.updated||0).getTime()<2*3600e3), recent=Date.now()-UO.syncFired<5*60e3;
+  const pub=((window.TAAS_BUILD||{}).commit||'').slice(0,7), pc=String(d.pc_version||'').slice(0,7);
+  $('#syncVer').innerHTML=pc?`PC ${esc(pc)} · 패널 ${esc(pub||'–')} ${pub&&pc===pub?'<span class="ok">같음</span>':pub?'<span class="bad">다름</span>':''}`:`패널 ${esc(pub||'–')} · PC 버전 기록 없음`;
+  $('#syncSt').innerHTML=st?`<span class="${run?'run':st==='done'||st==='up_to_date'?'ok':'bad'}">${esc(SYNC_NM[st]||ST_NM[st]||st)}</span>${d.message?' — '+esc(d.message):''} · ${esc(when(d.updated||d.finished))}`:'동기화 기록 없음';
+  const b=$('#syncFire'); b.disabled=!can||run||recent; b.classList.toggle('warn',UO.syncArmed); b.textContent=UO.syncArmed?'확인 — 실행':run?'진행 중':recent?'요청함':'PC 폴더 맞추기';
+  if(!can) $('#syncEnv').innerHTML=UO.mcp?'PC 동기화 예약 작업이 아직 연결되지 않았습니다 — PC 에서 <code>Main_TAAS.bat sync</code> 를 실행하세요.':'이 화면에서는 버튼으로 실행할 수 없습니다 — PC 에서 <code>Main_TAAS.bat sync</code> 를 실행하세요.' }
+async function fireSync(){
+  if(!UO.syncArmed){ UO.syncArmed=true; renderSync(); setTimeout(()=>{ if(UO.syncArmed){UO.syncArmed=false;renderSync()} },8000); return }
+  UO.syncArmed=false; UO.syncFired=Date.now(); renderSync();
+  const runId='panel-sync-'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15);
+  try{ await UO.mcp.callTool(SRV,'fire_trigger',{trigger_id:AUTO.sync_trigger_id,text:`sync · 패널 'PC 폴더 맞추기' 버튼으로 실행 · run_id=${runId} · source=app · 패널 버전 ${(window.TAAS_BUILD||{}).commit||''} · 요청 ${new Date().toISOString()}`},{cache:false});
+    $('#syncEnv').innerHTML='<span class="run">PC 동기화를 요청했습니다.</span> 1~2분 안에 시작되고 진행 상태가 위 줄에 표시됩니다. PC 가 꺼져 있으면 ‘PC 연결 필요’로 끝납니다.' }
+  catch(e){ UO.syncFired=0; $('#syncEnv').innerHTML=mcpErr(e) }
+  renderSync() }
+$('#syncFire').onclick=fireSync;
 $('#extCopy').onclick=async()=>{ const t=$('#extPrompt'); try{ await navigator.clipboard.writeText(t.value); $('#extCopied').textContent='복사했습니다.' }catch(e){ t.focus(); t.select(); $('#extCopied').textContent='선택했습니다 — Ctrl+C' } };
-function openUpdDlg(){ $('#updDlg').hidden=false; renderDlg(); renderExt(); precheck(); setTimeout(()=>$('#updClose').focus(),0) }
+function openUpdDlg(){ $('#updDlg').hidden=false; renderDlg(); renderExt(); renderSync(); precheck(); setTimeout(()=>$('#updClose').focus(),0) }
 $('#updClose').onclick=()=>{$('#updDlg').hidden=true; $('#btnUpd').focus()};
 $('#updDlg').addEventListener('click',e=>{ if(e.target.id==='updDlg') $('#updClose').click() });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#updDlg').hidden) $('#updClose').click() });
@@ -1705,8 +1730,8 @@ $('#appCopy').onclick=async()=>{ const t=$('#appPrompt'); try{ await navigator.c
 function initOnlineUpd(){
   if(!isOnline()) return; renderUpdOnline();
   const cl=window.claude; if(!cl||!cl.use){ UO.dbOk=false; return }
-  cl.use('mcp').then(m=>{UO.mcp=m; renderUpdOnline()},()=>{});
-  cl.use('db').then(db=>{ if(!db){UO.dbOk=false; renderUpdOnline(); return} UO.db=db; subExt();
+  cl.use('mcp').then(m=>{UO.mcp=m; renderUpdOnline(); renderSync()},()=>{});
+  cl.use('db').then(db=>{ if(!db){UO.dbOk=false; renderUpdOnline(); return} UO.db=db; subExt(); db.doc((AUTO&&AUTO.sync_status_doc)||'ops/last_sync').onSnapshot(sn=>{ UO.sync=sn.exists?sn.data():null; renderSync() },()=>{});
     const tm=setTimeout(()=>{ if(UO.dbOk===null){UO.dbOk=false; renderUpdOnline()} },10000);
     db.doc('ops/last_run').onSnapshot(sn=>{ clearTimeout(tm); UO.dbOk=true; UO.doc=sn.exists?sn.data():null; renderUpdOnline() }, ()=>{ clearTimeout(tm); UO.dbOk=false; renderUpdOnline() }) },()=>{UO.dbOk=false});
 }

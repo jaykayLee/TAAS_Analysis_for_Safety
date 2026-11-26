@@ -2,11 +2,12 @@
 
 다음 세션은 `PROJECT.json` → 이 파일 → 관련 폴더 README 순서로 읽고 이어 갑니다(이전 `ops/HANDOFF.md`). 끝낸 항목은 지우지 말고 ✅ 와 날짜를 남깁니다.
 
-- 갱신: 2026-11-25 · 번들 v2.2 · KOSIS OpenAPI 로 부처 자료 수집 완료(REQ-20261125-01)
+- 갱신: 2026-11-26 · 번들 v2.3 · PC 폴더 자동 동기화(REQ-20261126-01)
 - 다음 단계 계획(업데이트·연동 분석·최종 산출물): https://claude.ai/artifact/3S1hsjTwodhXmQs8sJpYiU — 사용자 결정 대기: 산출물 독자·용도, ADAS 보급 자료, 주제 순서(기본 음주→속도→노출량→고령→이륜)
 
 ## 요청(01_Requests)
 
+- [완료] `REQ-20261126-01_PC_자동동기화.md` — PC 최신 여부 확인(ead5ef6 = main), 예약 작업 *TAAS PC 동기화*·패널 버튼, 갱신 절차 끝에 PC 동기화(v2.3)
 - [완료] `REQ-20261125-01_KOSIS_OpenAPI_수집.md` — 행정안전부·국토교통부·경찰청 KOSIS 14표 수집·반영(v2.1), 부처 예약 작업 생성(v2.2)
 - [완료] `REQ-20261123-01_표준구조_전환.md` — 공통 표준 구조 전환 1~3단계(v1.7·v1.8·v2.0), PC 폴더·온라인 패널(version 13)·예약 작업 프롬프트 반영 완료. ✅ 2026-11-23 Windows `install.bat` → V 모두 정상(글꼴 2종 있음, Office 파일 21개 열림), PC 최상위 이전 자료 3개 삭제(사용자 선택)
 
@@ -19,6 +20,7 @@
 - 패널 분석 묶음 6종 모두 켜짐 — 주행거리당(1억 대·㎞), 어린이·고령은 주민등록인구(9102) 분모.
 - KOSIS OpenAPI 키는 사용자 PC `Claude_Projects\KOSIS_통계_OpenAI 인증키.txt` 에 있음(저장소에는 쓰지 않음). 클라우드·연결 셸은 kosis.kr 접속 불가 → PC 브라우저로 수집.
 - 2025년 운전면허 소지자는 KOSIS 미공표(2026-11-25 기준) — 다음 갱신 때 반영.
+- PC 폴더 동기화: 갱신 작업이 끝나면 자동, 따로는 패널 [업데이트] → **PC 폴더 맞추기**(예약 작업 `trig_01PrVhbHL2T2LgZa4fgdXR1m`, 상태 db `ops/last_sync`) 또는 PC 에서 `Main_TAAS.bat sync`. 절차 `02_Strategy/04_LLM/LLM전략_PC동기화절차_v1.0.md`
 - 패널 아티팩트(https://claude.ai/artifact/UaFGY49Midoyg6h7BVLune) — 게시할 때 Artifact read 후, 이전 게시 파일(index.json·online/*)도 path 로 read 해야 publish 가 통과함.
 
 ## 다음 할 일 (순서대로)
@@ -34,6 +36,7 @@
 5. **다음 단계** — 위 계획 문서의 1단계(데이터 보강) → 2단계(주제별 분석, 음주·속도는 지금 가능) → 3단계(차량 기술 대응 매트릭스·종합 보고서·발표 자료·매뉴얼 갱신)
 
 ## 진행 기록
+- 2026-11-26 v2.3 PC 자동 동기화(예약 작업·패널 버튼·갱신 절차 마지막 단계), PC 는 확인 시점에 이미 최신(ead5ef6)
 - 2026-11-25 PC 반영(pc_sync + 부처 라이브러리 PC 조립, 연결 셸에 pyarrow 설치), PC `_to_delete` 정리(사용자 선택)
 - 2026-11-25 v2.1 KOSIS OpenAPI 14표(행안부·국토부·경찰청) 수집·반영, 주행거리 ㎞ 환산, 갱신 절차 보완(키 파일·CSV 조각)
 - 2026-11-23 v2.0 표준 구조(project-structure/1.0) 전환 · PC 반영(pc_sync 일괄 추출·library 이동, 연결 폴더 삭제 권한 승인됨) · 게시용 데이터 묶음은 publish_plan 에서 생성 — 이전 구조는 브랜치 archive/pre-standard-v1.6
