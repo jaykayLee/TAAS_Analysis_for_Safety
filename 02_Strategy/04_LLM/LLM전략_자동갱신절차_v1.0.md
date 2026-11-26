@@ -70,6 +70,7 @@ TAAS·KOSIS 사이트는 클라우드에서 접속되지 않습니다. **사용�
    - `publish`(url=`artifact_url`, file_path=`01_Panel/Main/TAAS_분석패널.html`, files=`_source/ops/_publish_1.json` 내용 — 페이지·`index.json`·`build_info.*`·`online/` 데이터 묶음 약 20개). `_publish_2.json` 이 있으면 같은 file_path 로 한 번 더.
    - **`capabilities` 는 넘기지 않습니다**(넘기면 패널 버튼의 연결 권한이 바뀝니다).
 7. 상태 기록: `status=done, step=4, finished, version=<병합 커밋>, collected_years, panel_published=true, message="<연도>년 반영 완료 — 장표 n개, 셀 n개"`.
+8. **PC 폴더 동기화**(병합한 경우에만): `02_Strategy/04_LLM/LLM전략_PC동기화절차_v1.0.md` 1~4 단계를 그대로 수행해 사용자 PC 폴더를 방금 병합한 `main` 으로 맞추고, 상태 문서 `ops/last_sync` 를 `source=after_update` 로 기록합니다. PC 셸을 쓸 수 없으면 `ops/last_sync` 를 `needs_pc` 로 남기고 이 갱신 자체는 `done` 으로 둡니다(패널의 'PC 폴더 맞추기' 버튼이나 PC 의 `Main_TAAS.bat sync` 로 나중에 맞춤). 끝나면 4-7 의 기록에 `pc_synced=true|false` 를 더합니다.
 
 ## 실패
 - 어느 단계든 같은 오류가 두 번 나면 상태 `error`(message 에 단계와 사유) 로 기록하고 멈춥니다.

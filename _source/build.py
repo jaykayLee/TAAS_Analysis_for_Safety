@@ -19,7 +19,7 @@ TAAS_Analysis_for_Safety — 원문(03_References) → 분석 라이브러리(04
     <라이브러리>/ext_index.json 패널이 함께 불러오는 부처 장표 목록(+ 제도 연표 events)
 한 부처의 원본만 바뀌면 그 부처 라이브러리만 다시 조립합니다.
 """
-import argparse, hashlib, json, shutil, sys, time
+import argparse, hashlib, json, os, shutil, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -90,15 +90,26 @@ def build_into(raws, dest, keep=()):
     from build_library import build
     tmp = dest.with_name(dest.name + ".building")
     if tmp.exists():
-        shutil.rmtree(tmp)
+        remove_tree(tmp)
     res = build([str(p) for p in raws], tmp)
     if dest.exists():
         for k in keep:
             if (dest / k).exists():
                 shutil.move(str(dest / k), str(tmp / k))
-        shutil.rmtree(dest)
+        remove_tree(dest)
     tmp.rename(dest)
     return res
+
+
+def remove_tree(d):
+    """폴더 삭제 — 삭제가 막힌 폴더(Claude PC 연결 폴더)에서는 지우지 않고 <루트>/_to_delete/ 로 옮김"""
+    try:
+        shutil.rmtree(d)
+    except PermissionError:
+        td = ROOT / "_to_delete" / f"{d.name}_{time.strftime('%Y%m%d%H%M%S')}"
+        td.parent.mkdir(parents=True, exist_ok=True)
+        if d.exists():
+            os.replace(d, td)
 
 
 PANEL_ONLINE = "TAAS_분석패널.html"            # 온라인 게시본(claude.ai 아티팩트에 올리는 페이지)
@@ -192,7 +203,7 @@ def main():
     if (out / "ext").exists():
         for d in (out / "ext").iterdir():
             if d.is_dir() and d.name not in libs:
-                shutil.rmtree(d)  # 원본이 없어진 부처
+                remove_tree(d)  # 원본이 없어진 부처
     info_ext = write_ext_index(out, list(libs))
     print("      부처 라이브러리: " + (", ".join(f"{k} {v['patterns']}개" for k, v in info_ext.items()) or "없음"))
 

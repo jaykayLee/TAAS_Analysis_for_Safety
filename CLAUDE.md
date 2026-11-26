@@ -23,6 +23,7 @@
   - 자동화·검증용 훅: `window.TAAS_DEBUG()` → `{S, ST, yearPool, grid, UPD}`.
   - 업데이트: `_source/serve.py`(`/api/status`, `POST /api/update` + 헤더 `X-TAAS: 1`), 패널 `UPD`/`updStatus`/`runUpdate`, 버전 정보는 라이브러리의 `build_info.js`.
 - 자동 갱신: `02_Strategy/04_LLM/LLM전략_자동갱신절차_v1.0.md`(절차, 상태는 패널 db `ops/last_run`), `_source/ops/auto_update.json`(예약 작업 ID·아티팩트 URL). 패널을 다시 게시할 때 `capabilities` 를 넘기지 않습니다(버튼의 연결 권한 유지). 게시 파일은 `python _source/ops/publish_plan.py` 로 만듭니다.
+- PC 동기화: 예약 작업 *TAAS PC 동기화*(`auto_update.json` 의 `sync_trigger_id`), 절차 `02_Strategy/04_LLM/LLM전략_PC동기화절차_v1.0.md`, 상태 db `ops/last_sync`. 자동 갱신·부처 갱신 절차의 마지막 단계도 이 절차(1~4)를 수행해 병합 직후 PC 폴더를 맞춤. 패널 [업데이트] 창의 **PC 폴더 맞추기** 버튼이 이 예약 작업을 실행.
 - 부처별 외부 라이브러리: 원자료 `03_References/02_Statistics/files/<부처>` → 원천 `04_Libraries/<분류>/LIB-<부처>/<부처>.json.gz`(변환 `_source/src/make_ext_raw.py`, 목록 `_source/ops/ext_sources.json`) → 생성물 `<라이브러리>/ext/<부처>`. TAAS 와 따로 조립·갱신(`python _source/build.py --ext <부처>`, 절차 `02_Strategy/04_LLM/LLM전략_부처자료갱신절차_v1.0.md`, 상태 db `ops/last_run_<부처>`). 패널은 `ext_index.json` 으로 합쳐 보여 줌.
   - 장표 번호: kostat 9001~9099(통계청) · police 9003, 9301~(경찰청) · mois 9101~(행정안전부) · molit 9201~(국토교통부) · policy 9901~(제도 연표, `04_Libraries/01_Standard_Law/LIB-POLICY`). 새 외부 자료도 그 부처 범위에 추가.
   - KOSIS 는 짧은 시간에 화면을 여러 번 열면 '비정상적인 서비스 이용'으로 차단함 — OpenAPI 키 우선, 화면 다운로드는 표 사이 60초.
