@@ -230,6 +230,23 @@ table.grid td{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
 .extrow{display:grid;grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
 .extrow .nm b{font-size:13px}
 @media (max-width:560px){.extrow{grid-template-columns:1fr auto}.extrow .st{grid-column:1/-1}}
+.qopt{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding:4px 8px 6px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--fg-2)}
+.qopt label{display:flex;gap:4px;align-items:center;cursor:pointer}.qopt input{accent-color:var(--sign)}
+.qrel{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;align-items:center}.qrel:empty{display:none}.qrel .chip{font-size:11px;padding:1px 7px}
+.main.collapsed .qopt{display:none}
+.tree .sres button.item{white-space:normal;line-height:1.35;padding-top:5px;padding-bottom:5px}
+.tree .sres .stars{color:var(--amber);font-size:11px;letter-spacing:-1px;margin-right:2px}
+.tree .sres .swhy{display:block;font-size:11px;color:var(--muted)}
+.tree .listin:has(.sres){width:auto}
+details.sug>summary{cursor:pointer;font-size:14px}
+.sugrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:10px}
+.sugc{border:1px solid var(--line);border-left:3px solid var(--sign);border-radius:var(--r);padding:8px 10px;background:var(--bg);display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.sugc .sk{font-size:11px;color:var(--sign);font-weight:600;letter-spacing:.02em}
+.sugc .see{color:var(--fg)}
+.sugc .sact{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto;padding-top:4px}
+.sugc .dots{font-size:11px;color:var(--fg-2);margin-right:auto;letter-spacing:.5px}
+.sugc .why{margin:4px 0 0;padding-left:16px;font-size:12px;color:var(--fg-2)}
+.sugno{margin-top:10px;font-size:12px;color:var(--fg-2)}.sugno summary{cursor:pointer}.sugno ul{margin:6px 0;padding-left:18px}
 .appbox ol{margin:8px 0;padding-left:20px;font-size:12.5px;color:var(--fg-2)}
 .appbox textarea{width:100%;font:12px/1.5 var(--mono);border:1px solid var(--line-strong);border-radius:6px;padding:8px;background:var(--surface);color:var(--fg);resize:vertical}
 @media (max-width:560px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -281,8 +298,9 @@ table.corr td.sel{outline:2px solid var(--fg)}
 </header>
 <div class="main">
   <aside class="tree" id="side">
-    <div class="treehead"><div class="search"><input type="search" id="q" placeholder="장표 검색 (예: 추돌, 음주, 노인)" aria-label="장표 검색"></div>
+    <div class="treehead"><div class="search"><input type="search" id="q" placeholder="필요한 자료를 말로 찾기 (예: 밤에 노인 보행자)" aria-label="장표 검색 — 관련도 순"></div>
       <button class="iconbtn" id="btnSide" type="button" title="목록 숨기기" aria-label="장표 목록 숨기기" aria-expanded="true">«</button></div>
+    <div class="qopt" id="qopt"><label title="끄면 연관어·비슷한 말·초성까지 찾아 관련도 순으로 보여 줍니다"><input type="checkbox" id="qExact"> 정확히 일치만</label><span class="crumb" id="qInfo"></span><div class="qrel" id="qRel"></div></div>
     <div class="pickbar" id="pickbar"><span>체크한 통계 <b id="ckN">0</b>개</span><span class="sp"></span>
       <button class="btn small primary" id="btnMulti" type="button" title="체크한 통계만 모아 추세 비교·상관행렬·산점도로 분석합니다" disabled>상관관계 분석</button>
       <button class="btn small" id="btnStatGo" type="button" title="체크한 통계를 모아 통계 기법 탭(추세·그레인저·회귀·주성분·중단 시계열)으로" disabled>통계 기법</button>
@@ -318,6 +336,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
         <div class="hint">클릭 = 기준선 M1 (가장 가까운 점) · Ctrl+클릭 = 비교선 M2 와 차이 계산 · 드래그 = 구간 확대 · Ctrl+휠 = 확대/축소 · 더블클릭 = 메모 · Ctrl+우클릭 = 전체 보기 · 범례 클릭 = 계열 숨기기</div>
         <div class="mbar" id="mbar"></div>
       </div>
+      <div class="card sugcard" id="sugExplore" hidden></div>
       <div class="card">
         <h3>표</h3>
         <div class="tablewrap" id="tbl"></div>
@@ -343,6 +362,7 @@ table.corr td.sel{outline:2px solid var(--fg)}
       <div class="note" id="corrNote">연도별 시계열은 대부분 같은 감소 추세를 공유해 원값끼리는 상관이 과대하게 나옵니다. 기본값인 1차 차분은 해마다의 증감끼리 비교합니다. 2005~2025년은 최대 21개 점이므로 p값을 함께 보세요.</div>
       <div class="card" id="setsCard" hidden><h3>선택한 통계 — 조건 바꾸기</h3><div class="sets" id="sets"></div>
         <div class="hint">축마다 '합계/특정 값'으로 고정하거나 '▦ 계열로 나누기'를 고르면 그 축의 값별로 계열이 생깁니다. 인구 장표는 연령구분(전체·어린이·일반·노인)으로 나눠 둡니다.</div></div>
+      <div class="card sugcard" id="sugCorr" hidden></div>
       <div class="card" id="trCard" hidden><div class="charthead"><h3 id="trTitle">추세 비교</h3><div class="ctools" data-for="tr">
           <label class="btn small" title="제도 시행 연표의 개입 연도를 세로선으로 표시"><input type="checkbox" id="tEv"> 제도 시행</label>
           <select id="tNorm" aria-label="추세 비교 값 변환" class="btn small"><option value="index">첫 연도=100 (지수)</option><option value="z">표준화 (z점수)</option><option value="raw">원값</option></select>
@@ -577,8 +597,9 @@ function renderStat(){
     :`<span class="pill live" title="${esc(tip)}">${S.mode==='online'?'온라인 라이브러리':'적용 라이브러리'} <b>${yr}</b></span>`;
 }
 function renderTree(){
-  const q=$('#q').value.trim(), box=$('#tree'); box.innerHTML='';
+  const q=$('#q').value.trim(), box=$('#tree'); box.innerHTML=''; $('#qInfo').textContent=''; $('#qRel').innerHTML='';
   if(!S.index){box.innerHTML='<div class="sub">라이브러리를 열면 장표 목록이 나옵니다.</div>';return}
+  if(q&&!$('#qExact').checked){ renderSearch(q,box); renderPickbar(); return }
   const groups=new Map();
   for(const p of S.index.patterns){
     if(q && !(p.name+p.path).includes(q)) continue;
@@ -612,6 +633,209 @@ function renderTree(){
 function saveChecked(){ try{localStorage.setItem('taas.checked',JSON.stringify([...S.checked]))}catch(e){} renderPickbar() }
 function renderPickbar(){ const n=S.index?[...S.checked].filter(p=>meta(p)&&hasData(p)).length:0; $('#ckN').textContent=n; $('#btnMulti').disabled=!n; $('#btnStatGo').disabled=!n; $('#btnCkClear').disabled=!S.checked.size }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- 개념 사전 (관련도 검색·연계 제안 공용) ----------
+   [개념, 같은 뜻(검색어→개념), 연관어(함께 찾는 말)] — 한 글자 낱말은 검색어와 똑같을 때만 씀(장표 이름에서는 2글자 이상만 찾음) */
+const CONCEPTS=[
+ ['고령',['노인','고령자','65세','어르신','시니어','노령','실버','노인운전자','노인보호구역'],['면허 반납','보행노인','적성검사']],
+ ['어린이',['아동','아이','유아','초등','초등학생','어린이보호구역','스쿨존','12세','소아','유치원','보행어린이'],['보호구역','통학']],
+ ['청소년',['10대','학생','중고생','청년','20대'],['초보','이륜']],
+ ['음주',['술','음주운전','혈중알코올','알코올','만취','윤창호','주취','숙취'],['단속','야간','재범']],
+ ['과속',['속도','제한속도','5030','속도위반','과속운전','고속주행'],['무인카메라','단속']],
+ ['야간',['밤','새벽','심야','저녁','주야','어두운'],['조명','시간대']],
+ ['시간대',['시간','몇시','출퇴근','오전','오후'],['요일','야간']],
+ ['요일',['주말','평일','토요일','일요일','월요일'],['월별','시간대']],
+ ['월별',['계절','여름','겨울','휴가','명절','설','추석','봄','가을','월'],['기상','요일']],
+ ['보행자',['보행','걷는','횡단','길건너','무단횡단','횡단보도','보행사상자','횡단중'],['차대사람','야간','고령']],
+ ['이륜',['오토바이','이륜차','이륜자동차','배달','원동기','스쿠터','pm','킥보드','전동킥보드','개인형이동장치','바이크'],['헬멧','배달']],
+ ['자전거',['자전거','사이클'],['헬멧','자전거도로']],
+ ['화물',['트럭','대형차','화물차','대형','덤프'],['사업용','고속도로']],
+ ['사업용',['영업용','버스','택시','렌터카','운수','상용','차량용도'],['화물']],
+ ['기상',['날씨','비','눈','안개','강우','강설','우천','폭우','기상상태'],['노면','월별']],
+ ['노면',['빙판','결빙','젖음','블랙아이스','노면상태','미끄러운'],['기상','겨울']],
+ ['도로형태',['교차로','터널','교량','고가','지하차도','단일로','건널목','교차로형태'],['도로선형']],
+ ['도로선형',['커브','곡선','경사','오르막','내리막','직선'],['도로형태']],
+ ['도로종류',['고속도로','국도','지방도','일반도로','특별광역시도','군도'],['도로 연장','교통량']],
+ ['사망',['사망자','숨진','치사','치명','죽은','사망률','사망사고'],['중상','심각도']],
+ ['부상',['부상자','다친','중상','경상','부상신고','사상자'],['사망']],
+ ['지역',['시도','시군구','지역별','서울','부산','대구','인천','광주','대전','울산','세종','경기','강원','충북','충남','전북','전남','경북','경남','제주','경찰청','경찰서'],['인구','도로 연장']],
+ ['인구',['주민등록','인구수','출생','출생률','고령화','저출산','인구구조','인구총조사','등록인구'],['노출량','고령','어린이']],
+ ['자동차등록',['등록대수','자동차 등록','보유','차량 수','자동차수','차량대수','신고대수'],['노출량','차종']],
+ ['주행거리',['대km','대·km','주행','교통량','통행량','일교통량','vkt'],['노출량']],
+ ['면허',['운전면허','면허소지','면허 소지','초보','운전경력','면허경과','반납','적성검사','무면허','소지자'],['고령']],
+ ['법규위반',['신호위반','중앙선','안전거리','위반','안전운전','불이행','법규','교차로통행'],['단속','과속']],
+ ['단속',['카메라','무인카메라','적발','과태료','범칙금','무인교통단속'],['법규위반','음주','과속']],
+ ['안전장구',['안전띠','안전벨트','카시트','헬멧','보호장구','좌석안전띠'],['사망']],
+ ['정책',['제도','법','시행','민식이법','윤창호법','개정','규제','도입','효과'],['보호구역','단속']],
+ ['국제',['oecd','해외','외국','국가별','국제','세계'],['사망']],
+ ['사고유형',['추돌','정면충돌','측면충돌','차대차','차대사람','차량단독','단독','전도','전복','충돌','후진'],['가해운전자']],
+ ['운전자',['가해','피해','가해운전자','운전자','성별','남성','여성','여자','남자'],['연령','면허']],
+ ['연령',['나이','연령대','연령층','연령별','연령구분'],['고령','어린이','청소년']],
+ ['차종',['승용차','승합','특수차','차량종류','가해차종'],['자동차등록','화물']],
+ ['뺑소니',['도주','미조치'],['야간']],
+ ['안전시설',['신호등','가드레일','과속방지턱','시설물','안전시설','조명','cctv'],['도로형태']],
+ ['노출량',['분모','비율','위험도','인구당','대당','만명당','10만명당'],['인구','자동차등록','주행거리']],
+].map(([label,syn,rel])=>({label,syn:syn.map(s=>s.toLowerCase()),rel}));
+const CONC=new Map(CONCEPTS.map(c=>[c.label,c]));
+const PARTICLE=/(에서|에게|으로|까지|부터|이랑|하고|별로|에는|와|과|의|에|을|를|이|가|은|는|로|도|만|들)$/;
+const STOPW=new Set(['통계','자료','데이터','관련','보고','싶어','싶은','찾아','보기','어떤','대한','있는','분석','정보','현황','좀','알려줘','보여줘','건수','수치']);
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const cho=s=>[...s].map(c=>{const k=c.charCodeAt(0)-0xAC00; return k>=0&&k<11172?CHO[Math.floor(k/588)]:c}).join('');
+function lev(a,b){ if(Math.abs(a.length-b.length)>1) return 9; const d=[...Array(b.length+1).keys()];
+  for(let i=1;i<=a.length;i++){ let p=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const t=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1)); p=t } } return d[b.length] }
+function ptext(p){ if(!p._tx){ const name=p.name.toLowerCase(), rest=[p.path.replace(/\([^)]*\)/g,''),(p.dim_names||[]).join(' '),(p.measures||[]).join(' ')].join(' ').toLowerCase();
+    p._tx={name,rest,all:name+' '+rest,cho:cho(p.name),words:[...new Set((p.name+' '+(p.dim_names||[]).join(' ')).split(/[\s·()\[\]>,/_]+/).filter(w=>w.length>=2))]} } return p._tx }
+const cHas=(t,c)=>t.includes(c.label)||c.syn.some(s=>s.length>=2&&t.includes(s));
+function pconc(p){ if(!p._cc){ const T=ptext(p), nm=(T.name+' '+(p.dim_names||[]).join(' ')).toLowerCase(); p._cn=new Set(CONCEPTS.filter(c=>cHas(nm,c)).map(c=>c.label)); p._cc=new Set(CONCEPTS.filter(c=>cHas(T.all,c)).map(c=>c.label)) } return p._cc }
+const pconcName=p=>(pconc(p),p._cn);
+let ALLTX=null; const inLib=t=>{ if(!ALLTX) ALLTX=S.index.patterns.map(p=>ptext(p).all).join('\n'); return ALLTX.includes(t) };
+function qTokens(q){ ALLTX=null; return q.toLowerCase().split(/[\s,·/?!.]+/).map(t=>{ if(t.length<2) return t; const u=t.replace(PARTICLE,''); if(!u||u===t) return t;
+    const known=x=>tokConcepts(x).length||inLib(x); return known(t)?t:known(u)?u:t }).filter(t=>t&&!STOPW.has(t)) }
+function tokConcepts(t){ return CONCEPTS.filter(c=>c.label===t||c.syn.includes(t)||(t.length>=2&&(c.label.startsWith(t)||c.syn.some(s=>s.length>=3&&s.startsWith(t))))) }
+/* 장표 하나에 대한 검색어 한 개의 점수와 이유 */
+function tokHit(p,t){ const T=ptext(p);
+  if(T.name.includes(t)) return {s:3,why:''};
+  if(T.rest.includes(t)) return {s:1.5,why:''};
+  let best={s:0,why:''}; const pc=pconc(p);
+  const pn=pconcName(p);
+  for(const c of tokConcepts(t)){
+    if(pn.has(c.label)&&best.s<2) best={s:2,why:`${c.label}←'${t}'`};
+    else if(pc.has(c.label)&&best.s<1.2) best={s:1.2,why:`${c.label}←'${t}'`};
+    if(best.s<0.7) for(const r of c.rel){ const rc=CONC.get(r); if((rc&&pc.has(r))||T.all.includes(r.toLowerCase())){ best={s:0.7,why:`연관: ${c.label}→${r}`}; break } } }
+  if(best.s) return best;
+  if(/^[ㄱ-ㅎ]{2,}$/.test(t)&&T.cho.includes(t)) return {s:1.5,why:`초성 '${t}'`};
+  if(t.length>=3){ const w=T.words.find(w=>lev(t,w.toLowerCase())===1); if(w) return {s:1,why:`비슷한 말: ${w}`} }
+  return best }
+function searchPatterns(q){
+  const toks=qTokens(q), P=S.index.patterns, N=P.length; if(!toks.length) return {rows:[],toks,rel:[]};
+  const H=toks.map(t=>P.map(p=>tokHit(p,t)));
+  const W=H.map(h=>{const df=h.filter(x=>x.s>0).length; return 1+Math.log((N+1)/(df+1))});
+  let rows=P.map((p,i)=>{ let s=0,m=0; const why=[]; toks.forEach((t,k)=>{const h=H[k][i]; if(h.s>0){m++; s+=h.s*W[k]; if(h.why) why.push(h.why)}});
+    s*=0.4+0.6*(m/toks.length); if(!hasData(p.pid)) s*=0.6; return {p,s,why,m} }).filter(r=>r.s>0).sort((a,b)=>b.s-a.s);
+  const top=rows.length?rows[0].s:0; rows=rows.filter(r=>r.s>=top*0.25).slice(0,60);
+  rows.forEach(r=>r.star=r.s>=top*0.7?3:r.s>=top*0.4?2:1);
+  const used=new Set(toks), rel=[]; for(const t of toks) for(const c of tokConcepts(t)) for(const r of c.rel) if(!used.has(r)&&!rel.includes(r)) rel.push(r);
+  return {rows,toks,rel:rel.slice(0,6)} }
+function renderSearch(q,box){
+  const R=searchPatterns(q); const st=n=>'★'.repeat(n)+'☆'.repeat(3-n);
+  $('#qInfo').textContent=R.rows.length?`관련도 순 · ${R.rows.length}개`:'';
+  $('#qRel').innerHTML=R.rel.length?'함께 찾는 말: '+R.rel.map(r=>`<button type="button" class="chip" data-rel="${esc(r)}">${esc(r)}</button>`).join(''):'';
+  $('#qRel').querySelectorAll('[data-rel]').forEach(b=>b.onclick=()=>{ $('#q').value=($('#q').value.trim()+' '+b.dataset.rel).trim(); renderTree() });
+  if(!R.rows.length){ box.innerHTML='<div class="sub">관련 장표를 찾지 못했습니다. 다른 말로 찾거나 "정확히 일치만"을 꺼 보세요.</div>'; return }
+  for(const {p,star,why} of R.rows){ const ok=hasData(p.pid), row=document.createElement('div'); row.className='irow sres'+(S.checked.has(p.pid)?' ck':'');
+    const ck=document.createElement('input'); ck.type='checkbox'; ck.checked=S.checked.has(p.pid); ck.disabled=!ok; ck.setAttribute('aria-label',p.name+' 상관관계 분석에 포함');
+    ck.onchange=()=>{ ck.checked?S.checked.add(p.pid):S.checked.delete(p.pid); row.classList.toggle('ck',ck.checked); saveChecked() };
+    const b=document.createElement('button'); b.type='button'; b.className='item'+(p.pid===S.pid?' on':'')+(ok?'':' nodata'); b.title=p.path+(ok?'':' (데이터 없음)');
+    const grp=p.path.split(' > ').slice(0,-1).join(' › ');
+    b.innerHTML=`<span class="stars" aria-label="관련도 ${star}/3">${st(star)}</span> ${esc(p.name)}<span class="swhy">${esc(grp)}${why.length?' · '+esc([...new Set(why)].join(' · ')):''}</span>`;
+    b.onclick=()=>selectPattern(p.pid); row.append(ck,b); box.appendChild(row) } }
+
+/* ---------- 연계 제안: 공통 축이 실제로 맞는 자료만, 볼 수 있는 결과와 함께 ----------
+   kind: 분모(노출량) · 원인 후보(활동·대책) · 제도 시행 · 외부 충격 · 비교 집단 · 다른 분해 */
+const ACCID=/사고|사망|부상|사상/;
+const DIMN=n=>/시도|시군구|경찰청|경찰서|지방/.test(n)?'시도':/연령/.test(n)?'연령':/차종/.test(n)?'차종':/도로종류/.test(n)?'도로종류':/시간대/.test(n)?'시간대':/^월$/.test(n)?'월':/요일/.test(n)?'요일':/용도/.test(n)?'용도':/국가/.test(n)?'국가':'';
+const SUBGROUP=['고령','어린이','음주','보행자','이륜','자전거','과속','사업용','화물','뺑소니','청소년'];
+const ACT=[
+ {c:['음주'],pid:9307,see:'음주 사고와 단속 건수의 시차 관계 — 단속이 늘면 1~2년 뒤 사고가 줄어드는지',m:'② 시차상관·그레인저 (1차 차분)',caution:'단속 건수는 단속 활동량에도 좌우됩니다 — 사고가 많아 단속을 늘린 역방향일 수 있습니다.',preset:'drunk'},
+ {c:['과속','법규위반'],pid:9306,see:'무인카메라 누적 대수와 과속·신호위반 사고의 관계',m:'② 시차상관 · ⑤ 중단 시계열 (2021 안전속도 5030)',caution:'카메라 대수는 지금 있는 카메라의 설치연도로 센 값이라 철거된 카메라는 빠집니다.',preset:'speed'},
+ {c:['법규위반'],pid:9308,see:'위반 유형별 단속 건수와 같은 유형 사고 비교',m:'② 시차상관',caution:'단속 자료가 공개된 연도가 적습니다.'},
+ {c:['고령','면허'],pid:9305,see:'고령 운전자 면허 반납과 노인 관련 사고의 관계',m:'② 시차상관 · ③ 다중회귀 (노인 인구 통제)',caution:'반납자는 원래 운전을 거의 안 하던 사람일 수 있습니다(선택 효과).',preset:'elderly'},
+ {c:['어린이'],pid:9003,see:'어린이보호구역 지정 개소 증가와 어린이 사고율',m:'③ 다중회귀 (어린이 인구 통제) · ⑤ 중단 시계열 (2020)',caution:'보호구역 지정은 사고가 많던 곳부터 늘었을 수 있습니다.',preset:'child'},
+];
+const EVMAP={음주:'음주',과속:'속도',어린이:'어린이',보행자:'보행자',고령:'고령',이륜:'이륜PM',자전거:'이륜PM',안전장구:'안전띠',사업용:'사업용',화물:'사업용'};
+function denCands(src,C){ const out=[], dims=new Set(src.flatMap(p=>(p.dim_names||[]).map(DIMN)).filter(Boolean));
+  const pop=hasData(9102)?9102:9001;
+  if(C.has('고령')) out.push({pid:pop,see:'노인 인구로 나눈 10만 명당 사고율 — 고령 인구가 늘어난 효과를 빼고 위험도 변화만 봄',m:'상관관계 분석 → 비율 환산 (분모: 노인 65세 이상, × 10만)',preset:'elderly',den:/노인/});
+  else if(C.has('어린이')) out.push({pid:pop,see:'어린이 인구로 나눈 10만 명당 사고율 — 저출산으로 어린이가 줄어든 효과를 빼고 비교',m:'상관관계 분석 → 비율 환산 (분모: 어린이 0~12세, × 10만)',preset:'child',den:/어린이/});
+  if(dims.has('시도')) out.push({pid:pop,see:'시도별 인구 10만 명당 사고율 — 인구가 많은 지역이 사고도 많은 효과를 빼고 지역끼리 비교',m:'상관관계 분석 → 시도로 나눈 뒤 비율 환산',den:/전국|계/});
+  if(C.has('이륜')) out.push({pid:9202,see:'이륜차 1만 대당 사고 — 배달 증가로 늘어난 차량 수 효과를 분리',m:'상관관계 분석 → 비율 환산 (× 1만)'});
+  if(C.has('화물')||C.has('사업용')||dims.has('차종')) out.push({pid:9201,see:'차종별 등록대수로 나눈 1만 대당 사고 — 차종 구성 변화 효과 분리',m:'상관관계 분석 → 차종을 맞춰 비율 환산 (× 1만)'});
+  if(dims.has('도로종류')) out.push({pid:9203,see:'도로 1km 당 사고 — 도로가 늘어난 효과 분리',m:'상관관계 분석 → 비율 환산'},{pid:9204,see:'하루 교통량 대비 사고 — 통행량 변화 효과 분리',m:'상관관계 분석 → 비율 환산'});
+  if(C.has('면허')) out.push({pid:9301,see:'운전면허 소지자 1만 명당 가해 사고 — 운전자 수 증가 효과 분리',m:'상관관계 분석 → 비율 환산 (× 1만)'});
+  const spec=out.length;
+  out.push({pid:9205,see:'1억 대·km 당 사고 — 실제로 달린 거리(노출량) 대비 위험도',m:'분석 묶음 "주행거리당" 또는 비율 환산 (× 1억)',preset:'vkt'});
+  if(!out.some(o=>o.pid===9201)) out.push({pid:9201,see:'자동차 1만 대당 사고 — 차량 증가 효과를 뺀 위험도',m:'분석 묶음 "노출량" 또는 비율 환산 (× 1만)',preset:'exposure'});
+  return out.slice(0,spec?Math.min(spec+1,3):2).map(o=>({...o,kind:'분모',base:3,rel:'노출량(분모) — 사고 수를 위험에 노출된 규모로 나눔'})) }
+function suggest(srcPids){
+  const src=srcPids.map(meta).filter(Boolean); if(!src.length) return {ok:[],no:[]};
+  const subj=src.filter(p=>p.pid<9000||(p.measures||[]).some(m=>ACCID.test(m))), have=new Set(srcPids);
+  const C=new Set((subj.length?subj:src).flatMap(p=>[...pconcName(p)]));
+  const y0=Math.min(...src.map(p=>p.year_min)), y1=Math.max(...src.map(p=>p.year_max));
+  const acc=src.some(p=>p.pid<9000||(p.measures||[]).some(m=>ACCID.test(m)));
+  const sdims=new Set(src.flatMap(p=>(p.dim_names||[]).map(DIMN)).filter(Boolean));
+  let cand=[]; const intl=sdims.has('국가');
+  if(acc) cand.push(...denCands(src,C));
+  for(const a of ACT) if(a.c.some(c=>C.has(c))) cand.push({...a,kind:'원인 후보',base:2,rel:'활동·대책 지표 ↔ 사고'});
+  const sub=SUBGROUP.filter(c=>C.has(c));
+  if(acc&&sub.length&&!have.has(1)) cand.push({pid:1,kind:'비교 집단',base:2,rel:`비교 집단 — ${sub[0]} 외 전체 사고`,see:`전체 사고 추세와 나란히 — ${sub[0]} 사고만의 변화인지, 전체가 함께 줄어든 것인지 구분 (차이의 차이)`,m:'추세 비교 (첫 연도=100) · ⑤ 중단 시계열에 비교 계열로'});
+  if(sub.length){ const c0=sub[0];
+    const sib=S.index.patterns.filter(p=>p.pid<9000&&!have.has(p.pid)&&pconc(p).has(c0)&&hasData(p.pid))
+      .map(p=>({p,nd:(p.dim_names||[]).map(DIMN).filter(d=>d&&!sdims.has(d))})).filter(x=>x.nd.length).sort((a,b)=>b.nd.length-a.nd.length).slice(0,2);
+    for(const {p,nd} of sib) cand.push({pid:p.pid,kind:'다른 분해',base:1,rel:`같은 주제(${c0})를 다른 축으로`,see:`같은 ${c0} 사고를 ${[...new Set(nd)].join('·')} 기준으로 — 어느 조건에서 몰리는지 구성비 확인`,m:'탐색 탭 → 값 변환 "계열 내 비중(%)"'}) }
+  // 제도 시행·외부 충격 (중단 시계열)
+  if(acc){ const tg=new Set([...C].map(c=>EVMAP[c]).filter(Boolean)), seen=new Set();
+    for(const e of S.events){ if(!e.its||seen.has(e.its)) continue; const ext=e.cat==='외생', hit=(e.target||[]).some(t=>tg.has(t))||tg.has(e.cat);
+      if(!hit&&!ext) continue; if(ext&&!sub.length&&!tg.size&&false) continue; seen.add(e.its);
+      cand.push({ev:e,kind:ext?'외부 충격':'제도 시행',base:ext?2:2,rel:ext?'같은 해의 다른 변화 — 섞이지 않게 통제':'시행 연도 전후 비교',
+        see:ext?`${e.its} ${shortEv(e.name)} — 이 해의 감소가 제도 효과로 잘못 읽히지 않게 더미로 통제`:`${e.its} ${shortEv(e.name)} 시행 전후의 수준·기울기 변화`,
+        m:ext?'③ 다중회귀 → 더미 연도 2020-2021':`⑤ 중단 시계열 (T=${e.its})`,caution:e.status!=='확인'?`제도 시행일 확인 상태: ${e.status}`:''}) }
+    const yrs=cand.filter(c=>c.ev&&c.kind==='제도 시행').map(c=>c.ev.its); const crowd=yrs.filter(y=>S.events.filter(e=>e.its===y).length>=3);
+    cand.forEach(c=>{ if(c.ev&&crowd.includes(c.ev.its)) c.caution=(c.caution?c.caution+' · ':'')+`${c.ev.its}년엔 제도가 여러 개 몰려 효과를 따로 떼기 어렵습니다.` }) }
+  const ok=[], no=[], dup=new Set();
+  for(const c of cand){ const key=c.ev?'ev'+c.ev.its:c.kind+c.pid; if(dup.has(key)||(!c.ev&&have.has(c.pid))) continue; dup.add(key);
+    if(intl&&(c.kind==='분모'||c.ev)){ no.push({...c,name:c.ev?shortEv(c.ev.name):(meta(c.pid)||{}).name||String(c.pid),reason:'국가별(OECD) 자료라 국내 자료·제도와 축이 다름 — 한국 계열만 골라 따로 보세요'}); continue }
+    if(c.ev){ const pre=c.ev.its-y0, post=y1-c.ev.its+1, why=[`✓ 시행 연도 ${c.ev.its} — 앞 ${pre}년 · 뒤 ${post}년 자료`,`✓ 관계: ${c.rel}`]; if(c.caution) why.push('⚠ '+c.caution);
+      if(pre<3||post<3) no.push({...c,name:shortEv(c.ev.name),reason:`시행 ${pre<3?'전':'후'} 자료가 ${Math.min(pre,post)}년뿐 — 전후 비교엔 3년 이상 필요`});
+      else ok.push({...c,name:c.ev.name,str:c.base,why}); continue }
+    const m=meta(c.pid); if(!m){ continue }
+    if(!hasData(c.pid)){ no.push({...c,name:m.name,reason:'아직 라이브러리에 자료가 없음'}); continue }
+    const o0=Math.max(y0,m.year_min), o1=Math.min(y1,m.year_max), n=o1-o0+1, need=c.kind==='다른 분해'?1:c.kind==='분모'?5:8;
+    if(n<need){ no.push({...c,name:m.name,reason:n<=0?`겹치는 연도 없음 (${m.year_min}~${m.year_max})`:`겹치는 연도 ${o0}~${o1} (${n}년) — ${c.kind==='분모'?'비율을 낼 연도가 너무 적음':'추세·시차 분석엔 짧음 (8년 이상 필요)'}`}); continue }
+    const shared=['연도',...new Set((m.dim_names||[]).map(DIMN).filter(d=>d&&sdims.has(d)))];
+    const str=Math.max(1,Math.min(3,c.base-(n<12&&c.kind!=='다른 분해'?1:0)));
+    const why=[`✓ 겹치는 연도 ${o0}~${o1} (${n}년)`,`✓ 공통 축: ${shared.join(' · ')}`,`✓ 관계: ${c.rel}`]; if(c.caution) why.push('⚠ '+c.caution);
+    ok.push({...c,name:m.name,str,why}) }
+  const KO={'분모':0,'원인 후보':1,'제도 시행':2,'비교 집단':3,'외부 충격':4,'다른 분해':5};
+  ok.sort((a,b)=>b.str-a.str||KO[a.kind]-KO[b.kind]);
+  const pick=[], kinds=new Set(); for(const c of [...ok].sort((a,b)=>KO[a.kind]-KO[b.kind]||b.str-a.str)) if(!kinds.has(c.kind)){kinds.add(c.kind);pick.push(c)}
+  for(const c of ok) if(pick.length<7&&!pick.includes(c)) pick.push(c);
+  pick.sort((a,b)=>b.str-a.str||KO[a.kind]-KO[b.kind]);
+  return {ok:pick,no:no.concat(ok.filter(c=>!pick.includes(c)).map(c=>({...c,reason:'제안이 많아 뒤로 미룸 (근거 '+c.str+'/3)'})))} }
+const DEN_M={9205:/연간 주행거리/,9102:/^인구\[/,9101:/^인구\[/,9001:/연간보간/,9201:/등록대수/,9202:/신고대수/,9203:/개통/,9204:/교통량/,9301:/소지자/};
+const SUG={closed:false}; try{SUG.closed=localStorage.getItem('taas.sugClosed')==='1'}catch(e){}
+function renderSug(where){
+  const host=$(where==='corr'?'#sugCorr':'#sugExplore'); if(!host) return;
+  const pids=where==='corr'?[...new Set(S.sets.map(T=>T.pid))]:(S.pid?[S.pid]:[]);
+  if(!S.index||!pids.length){ host.hidden=true; return }
+  const R=suggest(pids); host.hidden=false;
+  const lbl=where==='corr'?`통계 ${pids.length}개`:(meta(pids[0])||{}).name||'';
+  const dots=n=>'●'.repeat(n)+'○'.repeat(3-n);
+  host.innerHTML=`<details class="sug" ${SUG.closed?'':'open'}><summary><b>함께 보면 좋은 자료</b> <span class="crumb">선택: ${esc(lbl)} · 제안 ${R.ok.length}개</span></summary>
+    ${R.ok.length?`<div class="sugrow">${R.ok.map((c,i)=>`<div class="sugc"><div class="sk">${esc(c.kind)}</div><b>${esc(c.name)}</b>${c.pid?` <span class="crumb">장표 ${c.pid}</span>`:''}
+      <div class="see">볼 수 있는 것: ${esc(c.see)}</div><div class="hint">→ ${esc(c.m)}</div>
+      <div class="sact"><span class="dots" title="근거 강도 ${c.str}/3 — 겹치는 연도·공통 축·관계 규칙으로 매김">근거 ${dots(c.str)}</span>
+        ${c.ev?`<button class="btn small primary" type="button" data-i="${i}" data-a="its">${c.kind==='외부 충격'?'회귀에 더미로':'중단 시계열로'}</button>`:`<button class="btn small primary" type="button" data-i="${i}" data-a="add">추가</button>`}
+        ${c.preset&&presetOk(PRESETS.find(p=>p.id===c.preset)||{items:[]})?`<button class="btn small" type="button" data-i="${i}" data-a="pre" title="관련 통계·분모·배율·개입 연도를 한 번에 맞춤">분석 묶음</button>`:''}
+        <button class="btn small" type="button" data-i="${i}" data-a="why" aria-expanded="false">이유 보기</button></div>
+      <ul class="why" hidden>${c.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`).join('')}</div>`:'<div class="sub">공통 축이 맞는 연계 자료가 없습니다.</div>'}
+    ${R.no.length?`<details class="sugno"><summary>맞지 않아 뺀 자료 ${R.no.length}개</summary><ul>${R.no.map(c=>`<li><b>${esc(c.name)}</b> — ${esc(c.reason)}</li>`).join('')}</ul></details>`:''}
+    <div class="hint">제안은 공통 축(연도·시도·연령 등)과 관계 규칙으로만 고릅니다. 상관이 있다는 뜻이 아니라 '함께 놓으면 확인할 수 있는 것'입니다. 누르기 전에는 아무것도 바뀌지 않습니다.</div></details>`;
+  host.querySelector('details.sug').addEventListener('toggle',e=>{ SUG.closed=!e.target.open; try{localStorage.setItem('taas.sugClosed',SUG.closed?'1':'0')}catch(_){} });
+  host.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>sugAct(where,R.ok[+b.dataset.i],b.dataset.a,b)) }
+async function sugAct(where,c,a,btn){
+  if(a==='why'){ const ul=btn.closest('.sugc').querySelector('.why'); ul.hidden=!ul.hidden; btn.setAttribute('aria-expanded',String(!ul.hidden)); btn.textContent=ul.hidden?'이유 보기':'이유 접기'; return }
+  if(a==='pre') return runPreset(c.preset);
+  if(a==='its'){ if(where==='explore'){ if(S.pid) S.checked.add(S.pid); saveChecked(); renderTree(); await runMulti(true) }
+    if(c.kind==='외부 충격'){ $('#oDummy').value='2020-2021'; S.mtab='ols' } else { $('#iYear').value=c.ev.its; S.mtab='its' }
+    showTab('stat'); renderMethods(); toast(c.kind==='외부 충격'?'다중회귀 더미 연도를 2020-2021 로 맞췄습니다.':`중단 시계열 개입 연도를 ${c.ev.its}로 맞췄습니다.`); return }
+  // 추가: 탐색 탭 → 체크 목록에, 상관관계 탭 → 바로 계열로 (분모면 비율 환산까지)
+  if(where==='explore'){ if(S.pid) S.checked.add(S.pid); S.checked.add(c.pid); saveChecked(); renderTree();
+    toast(`'${c.name}'을(를) 체크 목록에 넣었습니다 — 왼쪽 위 '상관관계 분석'으로 함께 분석하세요.${c.kind==='분모'?' 분모는 비율 환산에서 고릅니다.':''}`); return }
+  const P=await getPattern(c.pid); if(!P) return toast('자료를 불러오지 못했습니다.',true);
+  const T=newSet(c.pid,P); if(c.kind==='분모'&&DEN_M[c.pid]){ const i=P.measures.findIndex(x=>DEN_M[c.pid].test(x)); if(i>=0) T.measure=i }
+  S.sets.push(T); await rebuildSet(T); S.checked.add(c.pid); saveChecked();
+  if(c.kind==='분모'){ const L=S.corr.filter(s=>s.pid===c.pid&&s.on), d=(c.den&&L.find(s=>c.den.test(s.name)))||L[0]; if(d){ S.rateDen=d.name; if(c.pid===9205) S.rateK=1e8; else if(POP_PIDS.has(c.pid)) S.rateK=1e5; else S.rateK=1e4 } }
+  renderCorr(); toast(`'${c.name}' 계열을 추가했습니다${S.rateDen&&c.kind==='분모'?' · 분모 '+S.rateDen:''}.`) }
 
 /* ---------- 탐색 ---------- */
 // 계층형 축(예: 사고유형 대분류 > 중분류 > 사고유형): 상위 차원을 '합계'로 고정하면 하위 값이 비므로 '모두'로 전환
@@ -683,9 +907,9 @@ async function selectPattern(pid,preset){
     if(m.dim_changed) cv.push('연도에 따라 축 구성이 달라 과거 연도에 없는 축은 비어 있습니다.') }
   $('#pNotes').innerHTML=cv.map(t=>`<div class="note">${t}</div>`).join('');
   const tok=S.tok=(S.tok||0)+1; const P=await getPattern(pid); if(tok!==S.tok) return; S.P=P;
-  if(!P){$('#dims').innerHTML='';$('#tbl').innerHTML='<div class="empty">이 장표는 라이브러리에 데이터가 없습니다.</div>';drawChart(null);return}
+  if(!P){$('#dims').innerHTML='';$('#tbl').innerHTML='<div class="empty">이 장표는 라이브러리에 데이터가 없습니다.</div>';drawChart(null);renderSug('explore');return}
   S.st=defaultState(P,m); if(preset) applyPreset(P,preset);
-  buildControls(); update();
+  buildControls(); update(); renderSug('explore');
 }
 function findDim(P,name){const e=P.dim_names.indexOf(name);if(e>=0)return e;return P.dim_names.findIndex(n=>n.includes(name))}
 function applyPreset(P,pr){
@@ -1506,6 +1730,8 @@ function showTab(v){document.querySelectorAll('.tabs button').forEach(b=>b.setAt
   ['explore','corr','stat','tech'].forEach(k=>$('#v-'+k).hidden=k!==v); if(v==='corr') renderCorr(); if(v==='stat') renderMethods()}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.v));
 $('#q').oninput=renderTree;
+try{$('#qExact').checked=localStorage.getItem('taas.qExact')==='1'}catch(e){}
+$('#qExact').onchange=()=>{ try{localStorage.setItem('taas.qExact',$('#qExact').checked?'1':'0')}catch(e){} renderTree() };
 /* 조건 변경: '자동 적용'이면 바로 다시 계산, 아니면 '분석 실행'을 누를 때까지 대기 */
 function setPending(on){const b=$('#btnRun'); b.classList.toggle('pending',on); b.textContent=on?'변경 사항 적용 ●':'분석 실행'}
 function changed(){ if(!S.P) return; if($('#autoRun').checked) update(); else setPending(true) }
@@ -1739,7 +1965,8 @@ function initOnlineUpd(){
 $('#btnUpd').onclick=()=>isOnline()?openUpdDlg():runUpdate();
 if(!window.TAAS_ONLINE){ updStatus(); setInterval(()=>{ if(!UPD.poll||!UPD.st||!UPD.st.job||UPD.st.job.state!=='running') updStatus() },10*60*1000) }
 
-window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD,UO}); // 검증·자동화용
+renderCorr=(f=>function(){ const r=f.apply(this,arguments); try{renderSug('corr')}catch(e){console.warn(e)} return r })(renderCorr);
+window.TAAS_DEBUG=()=>({S,ST,yearPool,grid,UPD,UO,searchPatterns,suggest}); // 검증·자동화용
 /* ---------- 시작: 라이브러리 폴더 안이면 바로, 아니면 예시 데이터 ---------- */
 function startWith(){ renderStat();renderTree();renderTech();renderCorr();renderPresets();
   if(S.index){const f=S.index.patterns.find(p=>hasData(p.pid)&&p.pid===7019)||S.index.patterns.find(p=>hasData(p.pid));if(f)selectPattern(f.pid)} }

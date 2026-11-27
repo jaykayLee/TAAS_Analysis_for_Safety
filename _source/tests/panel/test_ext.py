@@ -71,6 +71,11 @@ async def check(pg, label, errs, online=False):
     if label != "sample":  # 예시판은 일부 장표만 실어 묶음 대부분이 꺼짐
         assert {"exposure", "drunk", "speed", "child", "elderly"} <= set(pr), pr
         assert out["presets"]["child"]["rated"] == 2, out["presets"]["child"]  # 사고·사망만 나눔(보호구역·카메라는 그대로)  # 사고·사망만 나눔(보호구역·카메라는 그대로)
+    if label != "sample":  # 관련도 검색·연계 제안 (v2.4)
+        sr = await pg.evaluate("()=>{const D=window.TAAS_DEBUG(); const a=D.searchPatterns('술').rows.slice(0,3).map(r=>r.p.name); const s=D.suggest([7051]); return {a, ok:s.ok.map(c=>c.pid||0), no:s.no.map(c=>c.pid||0)}}")
+        assert all('음주' in n for n in sr["a"]), sr
+        assert 9306 in sr["ok"] and 9308 in sr["no"], sr  # 카메라는 제안, 2014~2018 단속은 기간이 짧아 제외
+        out["search_sug"] = sr
     if online:
         await pg.evaluate("()=>{document.getElementById('updDlg').hidden=false}")
         await pg.evaluate("()=>document.getElementById('btnUpd').click()")
